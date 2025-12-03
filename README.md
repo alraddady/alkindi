@@ -2,7 +2,7 @@
 
 # Alkindi
 
-**الكِنْدي** · *In honor of Al-Kindi, the 9th-century pioneer of cryptography*
+· *In honor of Alkindi (الكِنْدي), the 9th-century pioneer of cryptography*
 
 [![Status: Alpha](https://img.shields.io/badge/status-alpha-orange)](https://github.com/alraddady/alkindi)
 [![License: Apache-2.0](https://img.shields.io/github/license/alraddady/alkindi)](LICENSE)
@@ -30,13 +30,24 @@
 
 ## About
 
-The project is named after [**Al-Kindi**](https://www.britannica.com/biography/al-kindi) (الكِنْدي), the 9th-century Arab Muslim polymath who pioneered cryptanalysis and frequency analysis, laying the foundations for modern cryptography.
+The project is named after [**Alkindi**](https://www.britannica.com/biography/al-kindi) (الكِنْدي), the 9th-century Arab Muslim polymath who pioneered cryptanalysis and frequency analysis, laying the foundations for modern cryptography.
 
-**Alkindi** makes quantum-resistant cryptography straightforward and accessible in Python by providing clean, type-safe bindings to OpenSSL's implementations of NIST-standardized post-quantum algorithms:
+**Alkindi** makes quantum-resistant cryptography straightforward and accessible in Python by providing clean, type-safe bindings to OpenSSL's implementations of NIST-standardized post-quantum algorithms. As quantum computers advance, traditional public-key systems like RSA and elliptic curves become vulnerable. Alkindi provides the cryptographic primitives needed to protect against both classical and quantum attacks.
 
-- **ML-KEM** (formerly Kyber) — Key encapsulation mechanisms for secure key exchange
-- **ML-DSA** (formerly Dilithium) — Digital signatures for authentication and integrity
-- **SLH-DSA** (formerly SPHINCS+) — Hash-based signatures for conservative security guarantees
+### Supported Algorithms
+
+- **ML-KEM** (formerly Kyber) — Key encapsulation mechanisms for secure key exchange  
+  Based on lattice cryptography, ML-KEM enables two parties to establish a shared secret over an insecure channel. Available in three security levels (ML-KEM-512, ML-KEM-768, ML-KEM-1024) corresponding to AES-128, AES-192, and AES-256 equivalent security.
+
+- **ML-DSA** (formerly Dilithium) — Digital signatures for authentication and integrity  
+  Lattice-based signatures that provide quantum-resistant authentication. Three parameter sets (ML-DSA-44, ML-DSA-65, ML-DSA-87) offer balanced trade-offs between signature size and security strength.
+
+- **SLH-DSA** (formerly SPHINCS+) — Hash-based signatures for conservative security guarantees  
+  Unlike lattice-based schemes, SLH-DSA relies only on hash function security, making it ideal for long-term signatures and applications requiring minimal cryptographic assumptions. Available in multiple variants optimized for either speed or size.
+
+
+Alkindi uses **CFFI** to interface directly with OpenSSL's C implementations, achieving high performance with minimal overhead. The library provides a stateless, thread-safe API with full type annotations for enhanced developer experience. 
+
 
 > **Status:** Alpha — Alkindi is under active development with the explicit goal of becoming a production-grade, thoroughly reviewed PQC library for Python. APIs may change before version 1.0.0.
 
