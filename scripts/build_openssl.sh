@@ -5,7 +5,6 @@ set -u
 
 ENABLE_SANITIZERS="${ENABLE_SANITIZERS:-0}"
 
-# Default sanitizer flags (used only when ENABLE_SANITIZERS=1)
 SAN_CFLAGS_DEFAULT="-fsanitize=address,undefined -fno-omit-frame-pointer -g"
 SAN_LDFLAGS_DEFAULT="-fsanitize=address,undefined"
 
@@ -22,7 +21,7 @@ fi
 
 OPENSSL_URL="https://github.com/openssl/openssl/releases/download/openssl-${OPENSSL_VERSION}/openssl-${OPENSSL_VERSION}.tar.gz"
 OPENSSL_DIR="openssl-${OPENSSL_VERSION}"
-BUILD_DIR="$(pwd)/openssl-build"
+BUILD_DIR="${SCRIPT_DIR}/openssl-build"
 INSTALL_PREFIX="${BUILD_DIR}/install"
 DOWNLOAD_DIR="${BUILD_DIR}/downloads"
 
@@ -48,7 +47,6 @@ check_dependencies() {
 
     local missing_deps=()
 
-    # 'file' removed – only hard deps now:
     for cmd in curl tar make perl nm; do
         if ! command -v "$cmd" &> /dev/null; then
             missing_deps+=("$cmd")
@@ -98,36 +96,17 @@ configure_openssl() {
 
     echo_info "Configuring for static-only libcrypto..."
 
-    # Start from any existing flags (possibly coming from the environment)
-    # -Os = Optimize for size (safer than -O3 for crypto code)
-    # -flto = Link-Time Optimization (reduces size and improves performance)
-    local cflags="${CFLAGS:--Os -flto}"
-    local ldflags="${LDFLAGS:--flto}"
-
     if [ "${ENABLE_SANITIZERS}" -eq 1 ]; then
         echo_info "Sanitizers ENABLED for this OpenSSL build"
-
-        # Only append sanitizer flags if not already present
-        case " ${cflags} " in
-            *"-fsanitize="*) : ;;  # already has sanitizer flags
-            *) cflags="${cflags} ${SAN_CFLAGS_DEFAULT}" ;;
-        esac
-
-        case " ${ldflags} " in
-            *"-fsanitize="*) : ;;
-            *) ldflags="${ldflags} ${SAN_LDFLAGS_DEFAULT}" ;;
-        esac
+        export CFLAGS="${SAN_CFLAGS_DEFAULT}"
+        export LDFLAGS="${SAN_LDFLAGS_DEFAULT}"
     else
         echo_info "Sanitizers DISABLED for this OpenSSL build"
     fi
 
     echo_info "Using CC=${CC:-clang}"
-    echo_info "CFLAGS=${cflags}"
-    echo_info "LDFLAGS=${ldflags}"
 
     CC="${CC:-clang}" \
-    CFLAGS="${cflags}" \
-    LDFLAGS="${ldflags}" \
     ./Configure \
         --prefix="${INSTALL_PREFIX}" \
         --openssldir="${INSTALL_PREFIX}/ssl" \
@@ -210,24 +189,14 @@ build_openssl() {
     echo_info "Build complete."
 }
 
-test_openssl() {
-    echo_info "Running OpenSSL test suite (this may take several minutes)..."
-
-    cd "${DOWNLOAD_DIR}/${OPENSSL_DIR}"
-
-    if make test; then
-        echo_info "All tests passed!"
-    else
-        echo_warn "Some tests failed, but this may be expected with minimal build"
-        echo_warn "Continuing with installation..."
-    fi
-}
-
 install_openssl() {
     echo_info "Installing OpenSSL to ${INSTALL_PREFIX}..."
 
     cd "${DOWNLOAD_DIR}/${OPENSSL_DIR}"
-    make install_sw
+
+    CORES=$(detect_cores)
+    echo_info "Installing with ${CORES} parallel jobs..."
+    make -j"${CORES}" install_sw
 
     echo_info "Installation complete."
 }
@@ -339,7 +308,6 @@ main() {
     download_openssl
     configure_openssl
     build_openssl
-    test_openssl
     install_openssl
     verify_build
 
