@@ -2,7 +2,7 @@
 
 # Alkindi
 
-· *In honor of Alkindi (الكِنْدي), the 9th-century pioneer of cryptography*
+In honor of Alkindi (الكِندي), the 9th-century pioneer of cryptography*
 
 [![Status: Alpha](https://img.shields.io/badge/status-alpha-orange)](https://github.com/alraddady/alkindi)
 [![License: Apache-2.0](https://img.shields.io/github/license/alraddady/alkindi)](LICENSE)
