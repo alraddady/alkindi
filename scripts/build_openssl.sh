@@ -10,13 +10,13 @@ SAN_CFLAGS_DEFAULT="-fsanitize=address,undefined -fno-omit-frame-pointer -g"
 SAN_LDFLAGS_DEFAULT="-fsanitize=address,undefined"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-VERSIONS_FILE="${SCRIPT_DIR}/../.env"
+VERSIONS_FILE="${SCRIPT_DIR}/../build.env"
 
 if [ -f "${VERSIONS_FILE}" ]; then
-    # shellcheck source=../.env
+    # shellcheck source=../build.env
     source "${VERSIONS_FILE}"
 else
-    echo "ERROR: .env not found at ${VERSIONS_FILE}"
+    echo "ERROR: build.env not found at ${VERSIONS_FILE}"
     exit 1
 fi
 
