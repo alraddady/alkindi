@@ -207,7 +207,9 @@ class Signature:
                 lib.EVP_PKEY_free(pkey)
 
     @staticmethod
-    def verify(algorithm: str, public_key: bytes, message: bytes, signature: bytes) -> bool:
+    def verify(
+        algorithm: str, public_key: bytes, message: bytes, signature: bytes
+    ) -> bool:
         """
         Verify a digital signature.
 

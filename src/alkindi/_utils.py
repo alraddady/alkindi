@@ -11,7 +11,9 @@ from _alkindi_ import ffi, lib
 from alkindi.exceptions import AlkindiError, OpenSSLError
 
 
-def check_openssl_errors(result: Any, operation: str, error_class: Type[AlkindiError] = OpenSSLError) -> None:
+def check_openssl_errors(
+    result: Any, operation: str, error_class: Type[AlkindiError] = OpenSSLError
+) -> None:
     """
     Check an OpenSSL operation for errors and raise an exception if it failed.
 
@@ -41,9 +43,8 @@ def check_openssl_errors(result: Any, operation: str, error_class: Type[AlkindiE
         if error_code != 0:
             error_str_ptr = lib.ERR_error_string(error_code, ffi.NULL)
             if error_str_ptr != ffi.NULL:
-                openssl_error = ffi.string(error_str_ptr).decode('utf-8', errors='replace')
+                openssl_error = ffi.string(error_str_ptr).decode(
+                    "utf-8", errors="replace"
+                )
 
-        raise error_class(
-            f"{operation} failed",
-            openssl_error=openssl_error
-        )
+        raise error_class(f"{operation} failed", openssl_error=openssl_error)

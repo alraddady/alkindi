@@ -69,15 +69,15 @@ class BuildPyWithLibs(build_py):
                 else:
                     print("Warning: No OpenSSL libraries found to bundle")
             else:
-                print(f"Warning: OpenSSL library directory not found: {openssl_lib_dir}")
+                print(
+                    f"Warning: OpenSSL library directory not found: {openssl_lib_dir}"
+                )
 
 
 setup(
     cffi_modules=["src/alkindi/bindings.py:ffibuilder"],
-
     cmdclass={
         "build_py": BuildPyWithLibs,
     },
-
     distclass=BinaryDistribution,
 )

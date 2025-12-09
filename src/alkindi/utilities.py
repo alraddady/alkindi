@@ -7,59 +7,56 @@ post-quantum algorithms across both KEM and signature schemes.
 from alkindi._params import MLKEM_PARAMS, MLDSA_PARAMS, SLHDSA_PARAMS
 
 _SECURITY_LEVELS = {
-    'ML-KEM-512': (1, 128),
-    'ML-KEM-768': (3, 192),
-    'ML-KEM-1024': (5, 256),
-
-    'ML-DSA-44': (2, 128),
-    'ML-DSA-65': (3, 192),
-    'ML-DSA-87': (5, 256),
-
-    'SLH-DSA-SHA2-128S': (1, 128),
-    'SLH-DSA-SHA2-128F': (1, 128),
-    'SLH-DSA-SHA2-192S': (3, 192),
-    'SLH-DSA-SHA2-192F': (3, 192),
-    'SLH-DSA-SHA2-256S': (5, 256),
-    'SLH-DSA-SHA2-256F': (5, 256),
-
-    'SLH-DSA-SHAKE-128S': (1, 128),
-    'SLH-DSA-SHAKE-128F': (1, 128),
-    'SLH-DSA-SHAKE-192S': (3, 192),
-    'SLH-DSA-SHAKE-192F': (3, 192),
-    'SLH-DSA-SHAKE-256S': (5, 256),
-    'SLH-DSA-SHAKE-256F': (5, 256),
+    "ML-KEM-512": (1, 128),
+    "ML-KEM-768": (3, 192),
+    "ML-KEM-1024": (5, 256),
+    "ML-DSA-44": (2, 128),
+    "ML-DSA-65": (3, 192),
+    "ML-DSA-87": (5, 256),
+    "SLH-DSA-SHA2-128S": (1, 128),
+    "SLH-DSA-SHA2-128F": (1, 128),
+    "SLH-DSA-SHA2-192S": (3, 192),
+    "SLH-DSA-SHA2-192F": (3, 192),
+    "SLH-DSA-SHA2-256S": (5, 256),
+    "SLH-DSA-SHA2-256F": (5, 256),
+    "SLH-DSA-SHAKE-128S": (1, 128),
+    "SLH-DSA-SHAKE-128F": (1, 128),
+    "SLH-DSA-SHAKE-192S": (3, 192),
+    "SLH-DSA-SHAKE-192F": (3, 192),
+    "SLH-DSA-SHAKE-256S": (5, 256),
+    "SLH-DSA-SHAKE-256F": (5, 256),
 }
 
 # Pre-computed algorithm lists for efficient lookup (immutable static data)
 _KEM_ALGORITHMS = [
     {
-        'name': name,
-        'type': 'kem',
-        'security_category': _SECURITY_LEVELS[name][0],
-        'security_level': _SECURITY_LEVELS[name][1],
-        **params
+        "name": name,
+        "type": "kem",
+        "security_category": _SECURITY_LEVELS[name][0],
+        "security_level": _SECURITY_LEVELS[name][1],
+        **params,
     }
     for name, params in MLKEM_PARAMS.items()
 ]
 
 _MLDSA_ALGORITHMS = [
     {
-        'name': name,
-        'type': 'signature',
-        'security_category': _SECURITY_LEVELS[name][0],
-        'security_level': _SECURITY_LEVELS[name][1],
-        **params
+        "name": name,
+        "type": "signature",
+        "security_category": _SECURITY_LEVELS[name][0],
+        "security_level": _SECURITY_LEVELS[name][1],
+        **params,
     }
     for name, params in MLDSA_PARAMS.items()
 ]
 
 _SLHDSA_ALGORITHMS = [
     {
-        'name': name,
-        'type': 'signature',
-        'security_category': _SECURITY_LEVELS[name][0],
-        'security_level': _SECURITY_LEVELS[name][1],
-        **params
+        "name": name,
+        "type": "signature",
+        "security_category": _SECURITY_LEVELS[name][0],
+        "security_level": _SECURITY_LEVELS[name][1],
+        **params,
     }
     for name, params in SLHDSA_PARAMS.items()
 ]
@@ -81,12 +78,12 @@ def guide() -> None:
     """
 
     print(f"""
-{'=' * 80}
+{"=" * 80}
 POST-QUANTUM CRYPTOGRAPHIC ALGORITHMS GUIDE
-{'=' * 80}
+{"=" * 80}
 
 ALGORITHM TYPES:
-{'-' * 80}
+{"-" * 80}
 
 ML-KEM (Module Lattice-Based Key Encapsulation Mechanism):
   Standardized in FIPS 203, ML-KEM is designed for secure key exchange
@@ -109,9 +106,9 @@ SLH-DSA (Stateless Hash-Based Digital Signature Algorithm):
   'small' (s) variants for smaller signatures or 'fast' (f) variants
   for faster signing.
 
-{'-' * 80}
+{"-" * 80}
 NIST SECURITY CATEGORIES:
-{'-' * 80}
+{"-" * 80}
 
 Category 0:
     Not considered quantum safe. Algorithms with this category do not
@@ -146,24 +143,24 @@ Category 5 (256-bit security):
 """)
 
     print(f"""
-{'=' * 80}
+{"=" * 80}
 SUPPORTED ALGORITHMS
-{'=' * 80}""")
+{"=" * 80}""")
 
     for alg in _ALL_ALGORITHMS:
-        if alg['type'] == 'kem':
-            type_specific = f"""  Ciphertext Size: {alg['ciphertext_size']} bytes
-  Shared Secret Size: {alg['shared_secret_size']} bytes"""
+        if alg["type"] == "kem":
+            type_specific = f"""  Ciphertext Size: {alg["ciphertext_size"]} bytes
+  Shared Secret Size: {alg["shared_secret_size"]} bytes"""
         else:
-            type_specific = f"""  Signature Size: {alg['signature_size']} bytes"""
+            type_specific = f"""  Signature Size: {alg["signature_size"]} bytes"""
 
         print(f"""
-Algorithm: {alg['name']}
-  Type: {alg['type']}
-  Security Category: {alg['security_category']}
-  Security Level: {alg['security_level']} bits
-  Public Key Size: {alg['public_key_size']} bytes
-  Private Key Size: {alg['private_key_size']} bytes
+Algorithm: {alg["name"]}
+  Type: {alg["type"]}
+  Security Category: {alg["security_category"]}
+  Security Level: {alg["security_level"]} bits
+  Public Key Size: {alg["public_key_size"]} bytes
+  Private Key Size: {alg["private_key_size"]} bytes
 {type_specific}""")
 
     print(f"\n{'=' * 80}")

@@ -42,6 +42,7 @@ class OpenSSLError(AlkindiError):
         - Context initialization failures
         - Memory allocation failures
     """
+
     pass
 
 
@@ -55,4 +56,5 @@ class AlkindiAPIError(AlkindiError):
         - Unsupported algorithms
         - Invalid encoding formats
     """
+
     pass

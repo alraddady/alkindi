@@ -657,17 +657,21 @@ if platform.system() == "Darwin":
     # macOS Configuration
     # @loader_path = directory containing the extension module
     # ../alkindi.libs = sibling directory where OpenSSL libraries will be bundled
-    extra_link_args.extend([
-        "-Wl,-rpath,@loader_path/../alkindi.libs",
-    ])
+    extra_link_args.extend(
+        [
+            "-Wl,-rpath,@loader_path/../alkindi.libs",
+        ]
+    )
 
 elif platform.system() == "Linux":
     # Linux Configuration
     # $ORIGIN = directory containing the extension module
     # ../alkindi.libs = sibling directory where OpenSSL libraries will be bundled
-    extra_link_args.extend([
-        "-Wl,-rpath,$ORIGIN/../alkindi.libs",
-    ])
+    extra_link_args.extend(
+        [
+            "-Wl,-rpath,$ORIGIN/../alkindi.libs",
+        ]
+    )
 
 elif platform.system() == "Windows":
     # Windows Configuration

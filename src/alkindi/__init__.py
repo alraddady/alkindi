@@ -11,12 +11,12 @@ from alkindi.utilities import (
 
 __all__ = [
     # Main classes
-    'KEM',
-    'Signature',
+    "KEM",
+    "Signature",
     # Exceptions
-    'AlkindiError',
-    'OpenSSLError',
-    'AlkindiAPIError',
+    "AlkindiError",
+    "OpenSSLError",
+    "AlkindiAPIError",
     # Utility functions
-    'guide',
+    "guide",
 ]
