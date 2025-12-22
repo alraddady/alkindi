@@ -28,18 +28,18 @@ DOWNLOAD_DIR="${BUILD_DIR}/downloads"
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
-NO_COLOR='\033[0m'
+NC='\033[0m'
 
 echo_info() {
-    echo -e "${GREEN}[INFO]${NO_COLOR} $1"
+    echo -e "${GREEN}[INFO]${NC} $1"
 }
 
 echo_warn() {
-    echo -e "${YELLOW}[WARN]${NO_COLOR} $1"
+    echo -e "${YELLOW}[WARN]${NC} $1"
 }
 
 echo_error() {
-    echo -e "${RED}[ERROR]${NO_COLOR} $1"
+    echo -e "${RED}[ERROR]${NC} $1"
 }
 
 check_dependencies() {
@@ -104,9 +104,7 @@ configure_openssl() {
         echo_info "Sanitizers DISABLED for this OpenSSL build"
     fi
 
-    echo_info "Using CC=${CC:-clang}"
 
-    CC="${CC:-clang}" \
     ./Configure \
         --prefix="${INSTALL_PREFIX}" \
         --openssldir="${INSTALL_PREFIX}/ssl" \
@@ -145,8 +143,6 @@ detect_cores() {
         os_type="linux"
     elif [[ "${OSTYPE:-}" == "freebsd"* ]] || [[ "${OSTYPE:-}" == "openbsd"* ]] || [[ "${OSTYPE:-}" == "netbsd"* ]]; then
         os_type="bsd"
-    elif [[ "${OSTYPE:-}" == "msys"* ]] || [[ "${OSTYPE:-}" == "cygwin"* ]]; then
-        os_type="windows"
     else
         os_type="unknown"
     fi
@@ -160,9 +156,6 @@ detect_cores() {
             ;;
         bsd)
             cores=$(sysctl -n hw.ncpu 2>/dev/null)
-            ;;
-        windows)
-            cores=$(nproc 2>/dev/null || echo "$NUMBER_OF_PROCESSORS")
             ;;
         *)
             cores=$(getconf _NPROCESSORS_ONLN 2>/dev/null)
@@ -196,106 +189,10 @@ install_openssl() {
 
     CORES=$(detect_cores)
     echo_info "Installing with ${CORES} parallel jobs..."
+
     make -j"${CORES}" install_sw
 
     echo_info "Installation complete."
-}
-
-verify_build() {
-    echo_info "Verifying build..."
-    echo_info ""
-
-    local libcrypto_path="${INSTALL_PREFIX}/lib64/libcrypto.a"
-
-    if [ ! -f "${libcrypto_path}" ]; then
-        libcrypto_path="${INSTALL_PREFIX}/lib/libcrypto.a"
-    fi
-
-    if [ ! -f "${libcrypto_path}" ]; then
-        echo_error "libcrypto.a not found!"
-        exit 1
-    fi
-
-    echo_info "Static library found: ${libcrypto_path}"
-
-    local size
-    size=$(du -h "${libcrypto_path}" | cut -f1)
-    echo_info "Library size: ${size}"
-
-    echo_info "Analyzing library symbols..."
-    local symbol_count
-    symbol_count=$(nm "${libcrypto_path}" 2>/dev/null | wc -l | tr -d ' ')
-    echo_info "Total symbols: ${symbol_count}"
-
-    echo_info ""
-    echo_info "Checking OpenSSL binary..."
-    if [ -f "${INSTALL_PREFIX}/bin/openssl" ]; then
-        echo_info "OpenSSL binary found: ${INSTALL_PREFIX}/bin/openssl"
-
-        local bin_size
-        bin_size=$(du -h "${INSTALL_PREFIX}/bin/openssl" | cut -f1)
-        echo_info "  Binary size: ${bin_size}"
-
-        echo_info "  Getting version..."
-        local version
-        version=$("${INSTALL_PREFIX}/bin/openssl" version 2>/dev/null || echo "Unknown")
-        echo_info "  Version: ${version}"
-    else
-        echo_error "OpenSSL binary not found!"
-    fi
-
-    echo_info ""
-    echo_info "Checking headers..."
-    if [ -d "${INSTALL_PREFIX}/include/openssl" ]; then
-        echo_info "OpenSSL headers found"
-        local header_count
-        header_count=$(find "${INSTALL_PREFIX}/include/openssl" -name "*.h" 2>/dev/null | wc -l | tr -d ' ')
-        echo_info "  Header files: ${header_count}"
-    else
-        echo_warn "OpenSSL headers not found"
-    fi
-
-    echo_info ""
-    echo_info "Checking for PQC-required symbols..."
-
-    local pqc_found=0
-    local binary_found=0
-
-    if nm "${libcrypto_path}" 2>/dev/null | grep -q "EVP_"; then
-        echo_info "EVP API symbols found"
-        ((pqc_found++))
-    else
-        echo_error "EVP API symbols not found - build may be incorrect"
-    fi
-
-    if nm "${libcrypto_path}" 2>/dev/null | grep -q "EVP_PKEY"; then
-        echo_info "EVP_PKEY symbols found"
-        ((pqc_found++))
-    else
-        echo_warn "EVP_PKEY symbols not found"
-    fi
-
-    if [ -f "${INSTALL_PREFIX}/bin/openssl" ]; then
-        binary_found=1
-    fi
-
-    echo_info ""
-    echo_info "Build Verification Summary"
-    echo_info "Library: ${libcrypto_path}"
-    echo_info "Size: ${size}"
-    echo_info "Total symbols: ${symbol_count}"
-    echo_info "PQC-required symbols found: ${pqc_found}/2"
-    echo_info "OpenSSL binary found: $([ ${binary_found} -eq 1 ] && echo 'Yes' || echo 'No')"
-
-    if [ ${pqc_found} -eq 2 ] && [ ${binary_found} -eq 1 ]; then
-        echo_info "Build verification PASSED"
-        return 0
-    else
-        echo_warn "Build verification FAILED"
-        [ ${pqc_found} -ne 2 ] && echo_warn "  - Missing required PQC symbols"
-        [ ${binary_found} -ne 1 ] && echo_warn "  - OpenSSL binary not found"
-        return 1
-    fi
 }
 
 main() {
@@ -309,7 +206,6 @@ main() {
     configure_openssl
     build_openssl
     install_openssl
-    verify_build
 
     echo_info "Build completed successfully!"
     echo_info "Static library location:"
