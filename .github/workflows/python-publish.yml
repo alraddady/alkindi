@@ -1,0 +1,124 @@
+name: Build and Publish Wheels
+
+on:
+  workflow_dispatch:
+    inputs:
+      publish-to-pypi:
+        description: "Publish to PyPI after successful build?"
+        type: boolean
+        default: false
+
+      publish-to-testpypi:
+        description: "Publish to TestPyPI after successful build?"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  build-wheels:
+    name: ${{ matrix.os }} ${{ matrix.arch }}
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: ubuntu-24.04, arch: x86_64 }
+          - { os: ubuntu-24.04, arch: aarch64 }
+          - { os: macos-26, arch: arm64 }
+
+    steps:
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8
+
+      - uses: actions/setup-python@83679a892e2d95755f2dac6acb0bfd1e9ac5d548
+        with:
+          python-version: "3.13"
+          cache: "pip"
+
+      - name: Set up QEMU for Linux ARM64
+        if: matrix.arch == 'aarch64' && runner.os == 'Linux'
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: arm64
+
+      - name: Install cibuildwheel
+        run: pip install cibuildwheel
+
+      - name: Build wheels
+        env:
+          CIBW_BUILD: "cp310-* cp311-* cp312-* cp313-*"
+          CIBW_SKIP: "*-musllinux_*"
+          CIBW_ARCHS: ${{ matrix.arch }}
+          CIBW_MANYLINUX_IMAGE: manylinux_2_28
+
+          CIBW_BEFORE_ALL_LINUX: yum install -y perl-IPC-Cmd perl-Locale-Maketext-Simple perl-Time-Piece perl-core || true && bash {project}/scripts/build_openssl.sh
+          CIBW_BEFORE_ALL_MACOS: bash {project}/scripts/build_openssl.sh
+
+          CIBW_ENVIRONMENT_LINUX: >
+            OPENSSL_DIR=$PWD/openssl-build/install
+            PKG_CONFIG_PATH=$PWD/openssl-build/install/lib64/pkgconfig:$PWD/openssl-build/install/lib/pkgconfig
+          CIBW_ENVIRONMENT_MACOS: >
+            MACOSX_DEPLOYMENT_TARGET=14.0
+            OPENSSL_DIR=$PWD/openssl-build/install
+            PKG_CONFIG_PATH=$PWD/openssl-build/install/lib/pkgconfig
+
+          CIBW_TEST_COMMAND: python -c "import alkindi; import _alkindi_; from alkindi import KEM, Signature; print('Import successful')"
+          CIBW_BUILD_VERBOSITY: 1
+
+          CIBW_REPAIR_WHEEL_COMMAND_LINUX: auditwheel repair -w {dest_dir} {wheel}
+          CIBW_REPAIR_WHEEL_COMMAND_MACOS: delocate-wheel --require-archs {delocate_archs} -w {dest_dir} -v {wheel}
+        run: cibuildwheel --output-dir dist
+
+      - name: Check wheels
+        run: |
+          pip install twine
+          twine check dist/*.whl
+
+      - name: Upload wheels
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4
+        with:
+          name: wheels-${{ matrix.os }}-${{ matrix.arch }}
+          path: dist/*.whl
+
+  publish-pypi:
+    name: Publish to PyPI
+    runs-on: ubuntu-24.04
+    needs: build-wheels
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.publish-to-pypi == 'true'
+
+    environment:
+      name: pypi
+      url: https://pypi.org/project/alkindi/
+
+    steps:
+      - uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53
+        with:
+          path: dist/
+          merge-multiple: true
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@ed0c53931b1dc9bd32cbe73a98c7f6766f8a527e
+
+  publish-testpypi:
+    name: Publish to TestPyPI
+    runs-on: ubuntu-24.04
+    needs: build-wheels
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.publish-to-testpypi == 'true'
+
+    environment:
+      name: testpypi
+      url: https://test.pypi.org/project/alkindi/
+
+    steps:
+      - uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53
+        with:
+          path: dist/
+          merge-multiple: true
+
+      - name: Publish to TestPyPI
+        uses: pypa/gh-action-pypi-publish@ed0c53931b1dc9bd32cbe73a98c7f6766f8a527e
+        with:
+          repository-url: https://test.pypi.org/
