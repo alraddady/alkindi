@@ -29,7 +29,12 @@ from cffi import FFI
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_ROOT = os.path.join(SCRIPT_DIR, "..", "..")
 OPENSSL_INSTALL = os.path.join(PROJECT_ROOT, "scripts/openssl-build/install")
-OPENSSL_LIB = os.path.join(OPENSSL_INSTALL, "lib")
+
+if os.path.exists(os.path.join(OPENSSL_INSTALL, "lib64")):
+    OPENSSL_LIB = os.path.join(OPENSSL_INSTALL, "lib64")
+else:
+    OPENSSL_LIB = os.path.join(OPENSSL_INSTALL, "lib")
+
 OPENSSL_INCLUDE = os.path.join(OPENSSL_INSTALL, "include")
 
 ffibuilder = FFI()
@@ -673,15 +678,6 @@ elif platform.system() == "Linux":
         ]
     )
 
-elif platform.system() == "Windows":
-    # Windows Configuration
-    # On Windows, DLLs are found via:
-    # 1. Same directory as the extension
-    # 2. System PATH
-    # The alkindi.libs directory will be added to PATH or DLLs copied appropriately
-    # No extra compiler/linker flags needed here.
-    pass
-
 # CFFI Source Configuration:
 # Configure how CFFI should compile the C extension
 # This tells CFFI:
@@ -702,7 +698,7 @@ ffibuilder.set_source(
     #include <openssl/provider.h>
     """,
     include_dirs=[OPENSSL_INCLUDE],  # Path to OpenSSL header files
-    library_dirs=[OPENSSL_LIB],  # Path to OpenSSL libraries
+    library_dirs=[os.path.join(OPENSSL_INSTALL, "lib64"), os.path.join(OPENSSL_INSTALL, "lib"),],  # Path to OpenSSL libraries
     libraries=["crypto"],  # Link against libcrypto
     extra_compile_args=extra_compile_args,
     extra_link_args=extra_link_args,
