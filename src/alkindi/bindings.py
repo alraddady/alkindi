@@ -28,12 +28,16 @@ from cffi import FFI
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_ROOT = os.path.join(SCRIPT_DIR, "..", "..")
-OPENSSL_INSTALL = os.path.join(PROJECT_ROOT, "scripts/openssl-build/install")
 
-if os.path.exists(os.path.join(OPENSSL_INSTALL, "lib64")):
-    OPENSSL_LIB = os.path.join(OPENSSL_INSTALL, "lib64")
+if platform.system() == "Windows":
+    OPENSSL_INSTALL = os.environ.get("OPENSSL_DIR", "C:/Program Files/OpenSSL")
+    OPENSSL_LIB = os.path.join(OPENSSL_INSTALL, "lib", "VC", "x64", "MD")
 else:
-    OPENSSL_LIB = os.path.join(OPENSSL_INSTALL, "lib")
+    OPENSSL_INSTALL = os.path.join(PROJECT_ROOT, "scripts/openssl-build/install")
+    if os.path.exists(os.path.join(OPENSSL_INSTALL, "lib64")):
+        OPENSSL_LIB = os.path.join(OPENSSL_INSTALL, "lib64")
+    else:
+        OPENSSL_LIB = os.path.join(OPENSSL_INSTALL, "lib")
 
 OPENSSL_INCLUDE = os.path.join(OPENSSL_INSTALL, "include")
 
@@ -678,6 +682,16 @@ elif platform.system() == "Linux":
         ]
     )
 
+elif platform.system() == "Windows":
+    extra_link_args.extend(
+        [
+            "ws2_32.lib",      # Winsock
+            "advapi32.lib",    # Advanced Windows API
+            "crypt32.lib",     # Cryptography API
+            "user32.lib",      # User interface functions
+        ]
+    )
+
 # CFFI Source Configuration:
 # Configure how CFFI should compile the C extension
 # This tells CFFI:
@@ -686,6 +700,12 @@ elif platform.system() == "Linux":
 # - Where to find libraries (library_dirs)
 # - What libraries to link against (libraries)
 # - What extra compiler/linker flags to use
+
+if platform.system() == "Windows":
+    crypto_lib = ["libcrypto_static"]  # libcrypto_static.lib for static linking
+else:
+    crypto_lib = ["crypto"]  # libcrypto.a/so on Unix
+
 ffibuilder.set_source(
     "_alkindi_",
     """
@@ -696,10 +716,12 @@ ffibuilder.set_source(
     #include <openssl/pem.h>
     #include <openssl/bio.h>
     #include <openssl/provider.h>
+    #include <openssl/params.h>
+    #include <openssl/core_names.h>
     """,
     include_dirs=[OPENSSL_INCLUDE],  # Path to OpenSSL header files
-    library_dirs=[os.path.join(OPENSSL_INSTALL, "lib64"), os.path.join(OPENSSL_INSTALL, "lib"),],  # Path to OpenSSL libraries
-    libraries=["crypto"],  # Link against libcrypto
+    library_dirs=[OPENSSL_LIB],  # Path to OpenSSL libraries
+    libraries=crypto_lib,  # Link against libcrypto
     extra_compile_args=extra_compile_args,
     extra_link_args=extra_link_args,
 )

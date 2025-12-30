@@ -25,6 +25,18 @@ BUILD_DIR="${SCRIPT_DIR}/openssl-build"
 INSTALL_PREFIX="${BUILD_DIR}/install"
 DOWNLOAD_DIR="${BUILD_DIR}/downloads"
 
+detect_os() {
+    if [[ "${OSTYPE:-}" == "darwin"* ]]; then
+        echo "macos"
+    elif [[ "${OSTYPE:-}" == "linux"* ]]; then
+        echo "linux"
+    elif [[ "${OSTYPE:-}" == "msys"* ]] || [[ "${OSTYPE:-}" == "cygwin"* ]]; then
+        echo "windows"
+    else
+        echo "unknown"
+    fi
+}
+
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
@@ -141,8 +153,6 @@ detect_cores() {
         os_type="macos"
     elif [[ "${OSTYPE:-}" == "linux"* ]]; then
         os_type="linux"
-    elif [[ "${OSTYPE:-}" == "freebsd"* ]] || [[ "${OSTYPE:-}" == "openbsd"* ]] || [[ "${OSTYPE:-}" == "netbsd"* ]]; then
-        os_type="bsd"
     else
         os_type="unknown"
     fi
@@ -153,9 +163,6 @@ detect_cores() {
             ;;
         linux)
             cores=$(nproc 2>/dev/null)
-            ;;
-        bsd)
-            cores=$(sysctl -n hw.ncpu 2>/dev/null)
             ;;
         *)
             cores=$(getconf _NPROCESSORS_ONLN 2>/dev/null)
@@ -196,6 +203,18 @@ install_openssl() {
 }
 
 main() {
+    local os_type=$(detect_os)
+
+    if [ "$os_type" = "windows" ]; then
+        echo_info "Windows detected: Using system OpenSSL"
+        echo_info "Skipping custom build on Windows"
+        echo ""
+        echo_info "Please ensure OpenSSL 3.5.0+ is installed on your system:"
+        echo ""
+        echo_info "Set OPENSSL_DIR environment variable to OpenSSL installation path"
+        exit 0
+    fi
+
     echo_info "Starting minimal OpenSSL ${OPENSSL_VERSION} build for PQC..."
     echo_info "Build directory: ${BUILD_DIR}"
     echo_info "ENABLE_SANITIZERS=${ENABLE_SANITIZERS}"
