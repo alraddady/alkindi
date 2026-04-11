@@ -127,7 +127,7 @@ configure_openssl() {
         no-ocb no-poly1305 no-rc2 no-rc4 no-rmd160 no-scrypt \
         no-seed no-siphash no-siv no-sm2 no-sm3 no-sm4 no-whirlpool \
         no-ec no-ec2m \
-        no-afalgeng no-capieng no-dso no-engine no-legacy no-module \
+        no-dso no-legacy no-module \
         no-fips-securitychecks no-fips-post \
         no-cmp no-cms no-comp no-ct \
         no-deprecated no-docs \
@@ -136,7 +136,9 @@ configure_openssl() {
         no-psk no-rfc3779 \
         no-sock no-sm2-precomp no-srp no-srtp \
         no-ssl-trace no-ts no-uplink \
-        no-padlockeng no-multiblock no-pinshared no-sse2 \
+        no-apps no-async no-autoload-config \
+        no-dgram no-filenames no-makedepend no-tests \
+        no-thread-pool no-default-thread-pool no-ui-console \
         || {
             echo_error "Configuration failed!"
             exit 1
@@ -181,7 +183,6 @@ build_openssl() {
 
     cd "${DOWNLOAD_DIR}/${OPENSSL_DIR}"
 
-    CORES=$(detect_cores)
     echo_info "Detected ${CORES} CPU cores, building with ${CORES} parallel jobs..."
 
     make -j"${CORES}"
@@ -194,7 +195,6 @@ install_openssl() {
 
     cd "${DOWNLOAD_DIR}/${OPENSSL_DIR}"
 
-    CORES=$(detect_cores)
     echo_info "Installing with ${CORES} parallel jobs..."
 
     make -j"${CORES}" install_sw
@@ -203,21 +203,11 @@ install_openssl() {
 }
 
 main() {
-    local os_type=$(detect_os)
-
-    if [ "$os_type" = "windows" ]; then
-        echo_info "Windows detected: Using system OpenSSL"
-        echo_info "Skipping custom build on Windows"
-        echo ""
-        echo_info "Please ensure OpenSSL 3.5.0+ is installed on your system:"
-        echo ""
-        echo_info "Set OPENSSL_DIR environment variable to OpenSSL installation path"
-        exit 0
-    fi
-
     echo_info "Starting minimal OpenSSL ${OPENSSL_VERSION} build for PQC..."
     echo_info "Build directory: ${BUILD_DIR}"
     echo_info "ENABLE_SANITIZERS=${ENABLE_SANITIZERS}"
+
+    CORES=$(detect_cores)
 
     check_dependencies
     setup_directories
