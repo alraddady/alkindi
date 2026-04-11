@@ -69,8 +69,11 @@ class Signature:
 
         ctx = ffi.NULL
         pkey = ffi.NULL
+        priv_buf = None
+        priv_buf_size = 0
 
         try:
+            lib.ERR_clear_error()
             ctx = lib.EVP_PKEY_CTX_new_from_name(
                 ffi.NULL,
                 algorithm_name_in_bytes,
@@ -99,6 +102,7 @@ class Signature:
             result = lib.EVP_PKEY_get_raw_private_key(pkey, ffi.NULL, priv_len)
             check_openssl_errors(result, "Private key size query", OpenSSLError)
             priv_buf = ffi.new("unsigned char[]", priv_len[0])
+            priv_buf_size = priv_len[0]
             result = lib.EVP_PKEY_get_raw_private_key(pkey, priv_buf, priv_len)
             check_openssl_errors(result, "Private key export", OpenSSLError)
             private_key: bytes = bytes(ffi.buffer(priv_buf, priv_len[0]))
@@ -106,6 +110,8 @@ class Signature:
             return KeyPair(public_key=public_key, private_key=private_key)
 
         finally:
+            if priv_buf is not None and priv_buf_size > 0:
+                lib.OPENSSL_cleanse(priv_buf, priv_buf_size)
             if pkey != ffi.NULL:
                 lib.EVP_PKEY_free(pkey)
             if ctx != ffi.NULL:
@@ -144,12 +150,23 @@ class Signature:
                 "See the Alkindi documentation for valid options."
             )
 
+        if not isinstance(private_key, bytes):
+            raise AlkindiAPIError(
+                f"private_key must be bytes, got {type(private_key).__name__}"
+            )
+
+        if not isinstance(message, bytes):
+            raise AlkindiAPIError(
+                f"message must be bytes, got {type(message).__name__}"
+            )
+
         algorithm_name_in_bytes: bytes = algorithm.encode("ascii")
 
         pkey = ffi.NULL
         md_ctx = ffi.NULL
 
         try:
+            lib.ERR_clear_error()
             pkey = lib.EVP_PKEY_new_raw_private_key_ex(
                 ffi.NULL,
                 algorithm_name_in_bytes,
@@ -245,12 +262,28 @@ class Signature:
                 "See the Alkindi documentation for valid options."
             )
 
+        if not isinstance(public_key, bytes):
+            raise AlkindiAPIError(
+                f"public_key must be bytes, got {type(public_key).__name__}"
+            )
+
+        if not isinstance(message, bytes):
+            raise AlkindiAPIError(
+                f"message must be bytes, got {type(message).__name__}"
+            )
+
+        if not isinstance(signature, bytes):
+            raise AlkindiAPIError(
+                f"signature must be bytes, got {type(signature).__name__}"
+            )
+
         algorithm_name_in_bytes: bytes = algorithm.encode("ascii")
 
         pkey = ffi.NULL
         md_ctx = ffi.NULL
 
         try:
+            lib.ERR_clear_error()
             pkey = lib.EVP_PKEY_new_raw_public_key_ex(
                 ffi.NULL,
                 algorithm_name_in_bytes,

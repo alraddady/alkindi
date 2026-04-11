@@ -38,13 +38,16 @@ def check_openssl_errors(
         failed = True
 
     if failed:
-        openssl_error = None
-        error_code = lib.ERR_get_error()
-        if error_code != 0:
+        messages = []
+        while True:
+            error_code = lib.ERR_get_error()
+            if error_code == 0:
+                break
             error_str_ptr = lib.ERR_error_string(error_code, ffi.NULL)
             if error_str_ptr != ffi.NULL:
-                openssl_error = ffi.string(error_str_ptr).decode(
-                    "utf-8", errors="replace"
+                messages.append(
+                    ffi.string(error_str_ptr).decode("utf-8", errors="replace")
                 )
 
+        openssl_error = "; ".join(messages) if messages else None
         raise error_class(f"{operation} failed", openssl_error=openssl_error)
