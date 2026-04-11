@@ -11,25 +11,18 @@ requires-python = ">=3.10"
 license = "Apache-2.0"
 authors = [{ name = "Khalid Alraddady" }]
 
-keywords = [
-    "cryptography", "post-quantum", "quantum-resistant",
-    "ML-KEM", "ML-DSA", "SLH-DSA",
-    "FIPS-203", "FIPS-204", "FIPS-205",
-    "OpenSSL", "PQC", "Kyber", "Dilithium", "Sphincs+"
-]
-
 dependencies = ["cffi>=2.0"]
 
-[project.optional-dependencies]
-dev = [
-    "pytest>=7.0",
-    "hypothesis>=6.0",
-]
-
-all = ["alkindi[dev]"]
-
 [project.urls]
-Homepage = "https://github.com/alraddady/alkindi"
 Repository = "https://github.com/alraddady/alkindi"
 Issues = "https://github.com/alraddady/alkindi/issues"
 Documentation = "https://github.com/alraddady/alkindi#readme"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+alkindi = ["py.typed"]

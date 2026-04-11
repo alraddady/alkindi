@@ -29,15 +29,17 @@ from cffi import FFI
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_ROOT = os.path.join(SCRIPT_DIR, "..", "..")
 
-if platform.system() == "Windows":
-    OPENSSL_INSTALL = os.environ.get("OPENSSL_DIR", "C:/Program Files/OpenSSL")
-    OPENSSL_LIB = os.path.join(OPENSSL_INSTALL, "lib", "VC", "x64", "MD")
+OPENSSL_INSTALL = os.environ.get(
+    "OPENSSL_DIR",
+    os.path.join(PROJECT_ROOT, "scripts/openssl-build/install"),
+)
+
+if platform.system() != "Windows" and os.path.exists(
+    os.path.join(OPENSSL_INSTALL, "lib64")
+):
+    OPENSSL_LIB = os.path.join(OPENSSL_INSTALL, "lib64")
 else:
-    OPENSSL_INSTALL = os.path.join(PROJECT_ROOT, "scripts/openssl-build/install")
-    if os.path.exists(os.path.join(OPENSSL_INSTALL, "lib64")):
-        OPENSSL_LIB = os.path.join(OPENSSL_INSTALL, "lib64")
-    else:
-        OPENSSL_LIB = os.path.join(OPENSSL_INSTALL, "lib")
+    OPENSSL_LIB = os.path.join(OPENSSL_INSTALL, "lib")
 
 OPENSSL_INCLUDE = os.path.join(OPENSSL_INSTALL, "include")
 
@@ -68,52 +70,6 @@ ffibuilder.cdef("""
      * EVP_MD_CTX: Context for message digest and signature operations
      */
     typedef struct evp_md_ctx_st EVP_MD_CTX;
-
-
-    /******************************************************************
-     *                                                                *
-     *                       Utility Functions                        *
-     *                                                                *
-     ******************************************************************/
-
-    /**
-     * Gets the maximum output buffer size needed for key operations.
-     *
-     * For digital signatures: returns maximum signature size
-     * For KEM operations: returns ciphertext size
-     *
-     * IMPORTANT: This returns the maximum possible size, not the exact size.
-     * Always check the actual size returned by operation functions like
-     * EVP_DigestSign() to get the precise output length.
-     *
-     * @param pkey Key to query
-     * @return Maximum size in bytes, or 0 if unavailable, negative on error
-     */
-    int EVP_PKEY_get_size(const EVP_PKEY *pkey);
-
-    /**
-     * Gets the cryptographic length of the key in bits.
-     *
-     * This returns the key's nominal bit strength (e.g., 3072 for ML-KEM-768).
-     * The exact meaning is algorithm-specific and corresponds to the provider
-     * parameter OSSL_PKEY_PARAM_BITS.
-     *
-     * @param pkey Key to query
-     * @return Cryptographic length in bits, or 0 if unavailable, negative on error
-     */
-    int EVP_PKEY_get_bits(const EVP_PKEY *pkey);
-
-    /**
-     * Gets the security strength in bits as defined by NIST SP800-57.
-     *
-     * This represents the computational effort required to break the algorithm,
-     * expressed as equivalent symmetric key bits (e.g., 128, 192, 256).
-     * Corresponds to provider parameter OSSL_PKEY_PARAM_SECURITY_BITS.
-     *
-     * @param pkey Key to query
-     * @return Security bits, or 0 if unavailable, negative on error
-     */
-    int EVP_PKEY_get_security_bits(const EVP_PKEY *pkey);
 
 
     /******************************************************************
@@ -421,290 +377,41 @@ ffibuilder.cdef("""
      */
     void ERR_clear_error(void);
 
-
-    /******************************************************************
-     *                                                                *
-     *                  BIO (Basic I/O) Operations                    *
-     *                                                                *
-     ******************************************************************/
-
     /**
-     * BIO: Basic I/O abstraction for reading/writing data.
-     * Used for PEM/DER encoding/decoding operations.
-     */
-    typedef struct bio_st BIO;
-    typedef struct bio_method_st BIO_METHOD;
-
-    /**
-     * Creates a new BIO using the specified method.
+     * Securely erases a memory buffer.
      *
-     * @param type BIO method (e.g., from BIO_s_mem())
-     * @return New BIO or NULL on error
-     */
-    BIO *BIO_new(const BIO_METHOD *type);
-
-    /**
-     * Returns the memory BIO method.
-     * Memory BIOs store data in RAM buffers.
+     * Unlike memset, this call is guaranteed not to be optimized away by the
+     * compiler. Use for zeroing sensitive material (private keys, shared secrets)
+     * before buffers go out of scope.
      *
-     * @return BIO_METHOD for memory operations
+     * @param ptr Buffer to erase
+     * @param len Number of bytes to overwrite
      */
-    const BIO_METHOD *BIO_s_mem(void);
-
-    /**
-     * Creates a read-only memory BIO from a buffer.
-     * The buffer must remain valid while the BIO is in use.
-     *
-     * @param buf Pointer to data buffer
-     * @param len Length of buffer in bytes
-     * @return New BIO or NULL on error
-     */
-    BIO *BIO_new_mem_buf(const void *buf, int len);
-
-    /**
-     * Frees a BIO and all associated resources.
-     *
-     * @param a BIO to free
-     * @return 1 on success
-     */
-    int BIO_free(BIO *a);
-
-    /**
-     * Reads data from a BIO.
-     *
-     * @param b BIO to read from
-     * @param data Buffer to store read data
-     * @param dlen Maximum bytes to read
-     * @return Number of bytes read, or -1 on error
-     */
-    int BIO_read(BIO *b, void *data, int dlen);
-
-    /**
-     * Writes data to a BIO.
-     *
-     * @param b BIO to write to
-     * @param data Data to write
-     * @param dlen Number of bytes to write
-     * @return Number of bytes written, or -1 on error
-     */
-    int BIO_write(BIO *b, const void *data, int dlen);
-
-    /**
-     * BIO control operations.
-     * Used for querying BIO state and manipulating BIO behavior.
-     *
-     * @param bp BIO to operate on
-     * @param cmd Command code
-     * @param larg Long argument
-     * @param parg Pointer argument
-     * @return Command-specific return value
-     */
-    long BIO_ctrl(BIO *bp, int cmd, long larg, void *parg);
-
-    // BIO_ctrl command codes
-    #define BIO_CTRL_PENDING 10
-    #define BIO_CTRL_FLUSH 11
-    #define BIO_C_SET_BUF_MEM_EOF_RETURN 130
-    #define BIO_CTRL_INFO 3
-
-    /**
-     * Returns number of pending bytes in a BIO.
-     * Macro wrapper around BIO_ctrl(bio, BIO_CTRL_PENDING, 0, NULL)
-     */
-    size_t BIO_ctrl_pending(BIO *b);
-
-    /**
-     * Gets pointer to memory BIO's internal buffer.
-     *
-     * @param b Memory BIO
-     * @param pp Output pointer to buffer pointer
-     * @return Length of buffer
-     */
-    long BIO_get_mem_data(BIO *b, char **pp);
+    void OPENSSL_cleanse(void *ptr, size_t len);
 
 
-    /******************************************************************
-     *                                                                *
-     *                     PEM Format Operations                      *
-     *                                                                *
-     ******************************************************************/
-
-    /**
-     * Reads a public key from PEM format.
-     *
-     * @param bp BIO to read from
-     * @param x Optional EVP_PKEY pointer (NULL to allocate new)
-     * @param cb Password callback (NULL if not encrypted)
-     * @param u User data for callback
-     * @return EVP_PKEY or NULL on error
-     */
-    EVP_PKEY *PEM_read_bio_PUBKEY(BIO *bp, EVP_PKEY **x,
-                                   void *cb, void *u);
-
-    /**
-     * Writes a public key in PEM format.
-     *
-     * @param bp BIO to write to
-     * @param x Public key to write
-     * @return 1 on success, 0 on error
-     */
-    int PEM_write_bio_PUBKEY(BIO *bp, EVP_PKEY *x);
-
-    /**
-     * Reads a private key from PEM format.
-     * Supports password-protected keys via callback.
-     *
-     * @param bp BIO to read from
-     * @param x Optional EVP_PKEY pointer (NULL to allocate new)
-     * @param cb Password callback (NULL if not encrypted)
-     * @param u User data for callback
-     * @return EVP_PKEY or NULL on error
-     */
-    EVP_PKEY *PEM_read_bio_PrivateKey(BIO *bp, EVP_PKEY **x,
-                                       void *cb, void *u);
-
-    /**
-     * Writes a private key in PEM format.
-     * Can optionally encrypt the key with a password.
-     *
-     * @param bp BIO to write to
-     * @param x Private key to write
-     * @param enc Encryption cipher (NULL for no encryption)
-     * @param kstr Password buffer (or NULL)
-     * @param klen Password length
-     * @param cb Password callback (or NULL)
-     * @param u User data for callback
-     * @return 1 on success, 0 on error
-     */
-    int PEM_write_bio_PrivateKey(BIO *bp, EVP_PKEY *x,
-                                  const void *enc,
-                                  unsigned char *kstr, int klen,
-                                  void *cb, void *u);
-
-
-    /******************************************************************
-     *                                                                *
-     *                    DER Format Operations                       *
-     *                                                                *
-     ******************************************************************/
-
-    /**
-     * Converts a public key to DER format.
-     * Call with pp=NULL to get required buffer size.
-     *
-     * @param a Public key to encode
-     * @param pp Output buffer pointer (updated on write)
-     * @return Number of bytes written, or -1 on error
-     */
-    int i2d_PUBKEY(EVP_PKEY *a, unsigned char **pp);
-
-    /**
-     * Reads a public key from DER format.
-     *
-     * @param a Optional EVP_PKEY pointer (NULL to allocate new)
-     * @param pp Pointer to DER data (updated after read)
-     * @param length Length of DER data
-     * @return EVP_PKEY or NULL on error
-     */
-    EVP_PKEY *d2i_PUBKEY(EVP_PKEY **a, const unsigned char **pp, long length);
-
-    /**
-     * Converts a private key to DER format.
-     * Call with pp=NULL to get required buffer size.
-     *
-     * @param a Private key to encode
-     * @param pp Output buffer pointer (updated on write)
-     * @return Number of bytes written, or -1 on error
-     */
-    int i2d_PrivateKey(EVP_PKEY *a, unsigned char **pp);
-
-    /**
-     * Reads a private key from DER format.
-     *
-     * @param type Key type (or EVP_PKEY_NONE for auto-detect)
-     * @param a Optional EVP_PKEY pointer (NULL to allocate new)
-     * @param pp Pointer to DER data (updated after read)
-     * @param length Length of DER data
-     * @return EVP_PKEY or NULL on error
-     */
-    EVP_PKEY *d2i_PrivateKey(int type, EVP_PKEY **a,
-                             const unsigned char **pp, long length);
-
-
-    /******************************************************************
-     *                                                                *
-     *                      Memory Management                         *
-     *                                                                *
-     ******************************************************************/
-
-    /**
-     * Allocates memory using OpenSSL's allocator.
-     * Should be freed with OPENSSL_free().
-     *
-     * @param num Number of bytes to allocate
-     * @return Pointer to allocated memory, or NULL on error
-     */
-    void *OPENSSL_malloc(size_t num);
-
-    /**
-     * Frees memory allocated by OpenSSL functions.
-     *
-     * @param addr Memory to free
-     */
-    void OPENSSL_free(void *addr);
 """)
 
-# Platform-Specific Compilation Configuration
-# These settings ensure the compiled extension can find the bundled OpenSSL
-# libraries at runtime, without adding extra optimization / LTO flags that
-# might cause portability or toolchain issues.
+# OpenSSL is built as a static library, so libcrypto is linked
+# directly into the extension at compile time.
 
-extra_compile_args = []
 extra_link_args = []
 
-if platform.system() == "Darwin":
-    # macOS Configuration
-    # @loader_path = directory containing the extension module
-    # ../alkindi.libs = sibling directory where OpenSSL libraries will be bundled
+if platform.system() == "Windows":
+    # Windows requires explicit linking against system support libraries.
     extra_link_args.extend(
         [
-            "-Wl,-rpath,@loader_path/../alkindi.libs",
+            "ws2_32.lib",    # Winsock
+            "advapi32.lib",  # Advanced Windows API
+            "crypt32.lib",   # Cryptography API
+            "user32.lib",    # User interface functions
         ]
     )
-
-elif platform.system() == "Linux":
-    # Linux Configuration
-    # $ORIGIN = directory containing the extension module
-    # ../alkindi.libs = sibling directory where OpenSSL libraries will be bundled
-    extra_link_args.extend(
-        [
-            "-Wl,-rpath,$ORIGIN/../alkindi.libs",
-        ]
-    )
-
-elif platform.system() == "Windows":
-    extra_link_args.extend(
-        [
-            "ws2_32.lib",      # Winsock
-            "advapi32.lib",    # Advanced Windows API
-            "crypt32.lib",     # Cryptography API
-            "user32.lib",      # User interface functions
-        ]
-    )
-
-# CFFI Source Configuration:
-# Configure how CFFI should compile the C extension
-# This tells CFFI:
-# - What C source code to compile
-# - Where to find header files (include_dirs)
-# - Where to find libraries (library_dirs)
-# - What libraries to link against (libraries)
-# - What extra compiler/linker flags to use
 
 if platform.system() == "Windows":
-    crypto_lib = ["libcrypto_static"]  # libcrypto_static.lib for static linking
+    crypto_lib = ["libcrypto"]  # libcrypto.lib — no-shared build produces this name
 else:
-    crypto_lib = ["crypto"]  # libcrypto.a/so on Unix
+    crypto_lib = ["crypto"]  # libcrypto.a on Unix
 
 ffibuilder.set_source(
     "_alkindi_",
@@ -713,15 +420,12 @@ ffibuilder.set_source(
     #include <openssl/evp.h>
     #include <openssl/err.h>
     #include <openssl/crypto.h>
-    #include <openssl/pem.h>
-    #include <openssl/bio.h>
     #include <openssl/provider.h>
     #include <openssl/params.h>
     #include <openssl/core_names.h>
     """,
-    include_dirs=[OPENSSL_INCLUDE],  # Path to OpenSSL header files
-    library_dirs=[OPENSSL_LIB],  # Path to OpenSSL libraries
-    libraries=crypto_lib,  # Link against libcrypto
-    extra_compile_args=extra_compile_args,
+    include_dirs=[OPENSSL_INCLUDE],
+    library_dirs=[OPENSSL_LIB],
+    libraries=crypto_lib,
     extra_link_args=extra_link_args,
 )
