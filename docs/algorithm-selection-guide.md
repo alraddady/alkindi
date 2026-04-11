@@ -28,17 +28,17 @@ At a high level you will typically need:
 ML-KEM defines three parameter sets that trade off security level against bandwidth, memory,
 and CPU cost.
 
-- `ML-KEM-512`  
-  - NIST security category: 1  
-  - Approximate classical security: about 128 bits  
+- `ML-KEM-512`
+    - NIST security category: 1
+    - Approximate classical security: about 128 bits
 
-- `ML-KEM-768`  
-  - NIST security category: 3  
-  - Approximate classical security: about 192 bits  
+- `ML-KEM-768`
+    - NIST security category: 3
+    - Approximate classical security: about 192 bits
 
-- `ML-KEM-1024`  
-  - NIST security category: 5  
-  - Approximate classical security: about 256 bits  
+- `ML-KEM-1024`
+    - NIST security category: 5
+    - Approximate classical security: about 256 bits
 
 NIST recommends using `ML-KEM-768` as the default parameter set, as it provides a large
 security margin at a reasonable performance cost. In cases where this is impractical or
@@ -70,7 +70,7 @@ in internal design, assumptions, and performance.
 
 #### SLH-DSA (FIPS 205)
 
-- Stateless hash-based scheme derived from SPHINCS+.  
+- Stateless hash-based scheme derived from SPHINCS+.
 - Security relies only on the properties of cryptographic hash functions.
 - Signatures are larger and operations are typically slower than ML-DSA at comparable
   security levels.
@@ -91,17 +91,17 @@ A common pattern is:
 ML-DSA defines three parameter sets. They increase in security level, key size, and
 signature size.
 
-- `ML-DSA-44`  
-  - NIST security category: 2  
-  - Approximate classical security: about 128 bits  
+- `ML-DSA-44`
+    - NIST security category: 2
+    - Approximate classical security: about 128 bits
 
-- `ML-DSA-65`  
-  - NIST security category: 3  
-  - Approximate classical security: about 192 bits  
+- `ML-DSA-65`
+    - NIST security category: 3
+    - Approximate classical security: about 192 bits
 
-- `ML-DSA-87`  
-  - NIST security category: 5  
-  - Approximate classical security: about 256 bits  
+- `ML-DSA-87`
+    - NIST security category: 5
+    - Approximate classical security: about 256 bits
 
 Very roughly:
 
@@ -117,8 +117,8 @@ Very roughly:
 
 SLH-DSA variants are named along three axes:
 
-1. Security level: `128`, `192`, `256`  
-2. Hash family: `SHA2` vs `SHAKE`  
+1. Security level: `128`, `192`, `256`
+2. Hash family: `SHA2` vs `SHAKE`
 3. Size vs speed: `s` ("small") vs `f` ("fast")
 
 You will see names like:
@@ -129,25 +129,26 @@ You will see names like:
 
 Interpretation:
 
-- **Security level**  
-  - `128`, `192`, `256` roughly correspond to NIST categories 1, 3, and 5.  
-  - Higher numbers mean higher security and increased costs.
+- **Security level**
+    - `128`, `192`, `256` roughly correspond to NIST categories 1, 3, and 5.
+    - Higher numbers mean higher security and increased costs.
 
-- **Hash family: SHA2 vs SHAKE**  
-  - `SHA2` variants use SHA-2 style hash functions.  
-  - `SHAKE` variants use SHAKE (Keccak-based extendable-output functions).  
-  - The choice often follows your existing hash policies, available implementations,
-    and ecosystem constraints.
+- **Hash family: SHA2 vs SHAKE**
+    - `SHA2` variants use SHA-2 style hash functions.
+    - `SHAKE` variants use SHAKE (Keccak-based extendable-output functions).
+    - The choice often follows your existing hash policies, available implementations,
+      and ecosystem constraints.
 
-- **Size vs speed: "s" vs "f"**  
-  - `s` ("small") variants optimize for smaller signatures and keys, at the cost of more
-    computation per operation.  
-  - `f` ("fast") variants optimize for faster signing and verification, at the cost of
-    larger signatures and higher bandwidth and storage usage.
+- **Size vs speed: "s" vs "f"**
+    - `s` ("small") variants optimize for smaller signatures and keys, at the cost of more
+      computation per operation.
+    - `f` ("fast") variants optimize for faster signing and verification, at the cost of
+      larger signatures and higher bandwidth and storage usage.
 
 In practice:
 
 - Pick the security level that matches your key exchange and symmetric cipher choices.
 - Pick the hash family that aligns with your existing standards and implementations.
-- Choose `s` variants if bandwidth or storage is tight (smaller signatures, more computation) and `f` variants if CPU time is the main constraint (larger signatures, less computation).
+- Choose `s` variants if bandwidth or storage is tight (smaller signatures, more computation) and `f` variants if CPU
+  time is the main constraint (larger signatures, less computation).
 - 

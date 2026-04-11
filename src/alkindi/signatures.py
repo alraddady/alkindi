@@ -19,9 +19,8 @@ Memory Safety
     resources. Use 'with' blocks where appropriate to ensure timely release.
 """
 
-from typing import NamedTuple
-
 from _alkindi_ import ffi, lib
+from typing import NamedTuple
 
 from alkindi._params import SUPPORTED_SIGNATURE_ALGORITHMS
 from alkindi._utils import check_openssl_errors
@@ -225,7 +224,7 @@ class Signature:
 
     @staticmethod
     def verify(
-        algorithm: str, public_key: bytes, message: bytes, signature: bytes
+            algorithm: str, public_key: bytes, message: bytes, signature: bytes
     ) -> bool:
         """
         Verify a digital signature.

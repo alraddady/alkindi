@@ -19,7 +19,7 @@ Issues = "https://github.com/alraddady/alkindi/issues"
 Documentation = "https://github.com/alraddady/alkindi#readme"
 
 [tool.setuptools]
-package-dir = {"" = "src"}
+package-dir = { "" = "src" }
 
 [tool.setuptools.packages.find]
 where = ["src"]

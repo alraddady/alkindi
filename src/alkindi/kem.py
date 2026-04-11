@@ -16,9 +16,8 @@ Memory Safety
     resources. Use 'with' blocks where appropriate to ensure timely release.
 """
 
-from typing import NamedTuple, Tuple
-
 from _alkindi_ import ffi, lib
+from typing import NamedTuple, Tuple
 
 from alkindi._params import SUPPORTED_KEM_ALGORITHMS
 from alkindi._utils import check_openssl_errors

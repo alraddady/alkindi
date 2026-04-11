@@ -4,15 +4,14 @@ Internal utility for OpenSSL error handling.
 
 from __future__ import annotations
 
-from typing import Any, Type
-
 from _alkindi_ import ffi, lib
+from typing import Any, Type
 
 from alkindi.exceptions import AlkindiError, OpenSSLError
 
 
 def check_openssl_errors(
-    result: Any, operation: str, error_class: Type[AlkindiError] = OpenSSLError
+        result: Any, operation: str, error_class: Type[AlkindiError] = OpenSSLError
 ) -> None:
     """
     Check an OpenSSL operation for errors and raise an exception if it failed.

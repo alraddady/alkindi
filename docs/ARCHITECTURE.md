@@ -1,6 +1,7 @@
 # Alkindi Architecture
 
-Technical overview for developers who want to understand how Alkindi works internally, contribute to the project, or extend its functionality.
+Technical overview for developers who want to understand how Alkindi works internally, contribute to the project, or
+extend its functionality.
 
 ## Table of Contents
 
@@ -34,6 +35,7 @@ Alkindi provides Python bindings to OpenSSL's post-quantum cryptography via a la
 ```
 
 **Layer Responsibilities:**
+
 - **OpenSSL (C)**: FIPS-standardized PQC implementations, EVP API, memory management
 - **CFFI Bindings**: Low-level Python-to-C interface, automatic type conversion
 - **Error Handling**: Custom exception hierarchy, OpenSSL error extraction
@@ -72,17 +74,20 @@ alkindi-openssl/
 
 ### 1. CFFI Bindings (`src/alkindi/bindings.py`)
 
-Generates low-level Python bindings to OpenSSL's C API. Runs at build time to create the `_alkindi_` extension module with OpenSSL function declarations, compilation settings, and platform-specific linking.
+Generates low-level Python bindings to OpenSSL's C API. Runs at build time to create the `_alkindi_` extension module
+with OpenSSL function declarations, compilation settings, and platform-specific linking.
 
 ### 2. Key Encapsulation (`src/alkindi/kem.py`)
 
-Provides ML-KEM operations via static methods: `generate_keypair()`, `encapsulate()`, `decapsulate()`. Each operation validates inputs, creates OpenSSL contexts, performs crypto operations, and cleans up resources in try/finally blocks.
+Provides ML-KEM operations via static methods: `generate_keypair()`, `encapsulate()`, `decapsulate()`. Each operation
+validates inputs, creates OpenSSL contexts, performs crypto operations, and cleans up resources in try/finally blocks.
 
 **Operation Flow**: Validation → Context creation → OpenSSL EVP API calls → Export raw bytes → Cleanup → Return results
 
 ### 3. Digital Signatures (`src/alkindi/signatures.py`)
 
-Provides ML-DSA and SLH-DSA operations: `generate_keypair()`, `sign()`, `verify()`. Supports optional context strings (max 255 bytes) per FIPS 204/205.
+Provides ML-DSA and SLH-DSA operations: `generate_keypair()`, `sign()`, `verify()`. Supports optional context strings (
+max 255 bytes) per FIPS 204/205.
 
 **Sign Flow**: Validate → Import key → Create digest context → Sign → Cleanup → Return signature
 
@@ -91,6 +96,7 @@ Provides ML-DSA and SLH-DSA operations: `generate_keypair()`, `sign()`, `verify(
 ### 4. Parameters (`src/alkindi/_params.py`)
 
 Immutable algorithm parameters using `MappingProxyType` and `frozenset`:
+
 - Prevents accidental modifications
 - Thread-safe by design
 - Stores key/ciphertext/signature sizes for all supported algorithms
@@ -99,7 +105,8 @@ Immutable algorithm parameters using `MappingProxyType` and `frozenset`:
 
 **Exception Hierarchy**: `AlkindiError` → `OpenSSLError` (OpenSSL failures) / `AlkindiAPIError` (API usage errors)
 
-The `check_openssl_errors()` utility validates OpenSSL return values (NULL pointers, error codes) and extracts error strings from OpenSSL's error queue.
+The `check_openssl_errors()` utility validates OpenSSL return values (NULL pointers, error codes) and extracts error
+strings from OpenSSL's error queue.
 
 ### 6. Utilities (`src/alkindi/utilities.py`)
 
@@ -107,15 +114,18 @@ Public helper functions including `guide()` for displaying supported algorithms,
 
 ## Build System
 
-**Build Flow**: `pip install` → setuptools reads `pyproject.toml` → invokes `setup.py` → CFFI generates C extension from `bindings.py` → `BuildPyWithLibs` bundles OpenSSL libs to `alkindi.libs/` → package installation
+**Build Flow**: `pip install` → setuptools reads `pyproject.toml` → invokes `setup.py` → CFFI generates C extension from
+`bindings.py` → `BuildPyWithLibs` bundles OpenSSL libs to `alkindi.libs/` → package installation
 
 ### OpenSSL Build (`scripts/build_openssl.sh`)
 
-Builds minimal PQC-only OpenSSL 3.5.0+ with static linking, disabled legacy features (TLS/SSL, classical crypto), and size optimization (`-Os`, `-flto`). Outputs `libcrypto.a`, headers, and binary to `openssl-build/install/`.
+Builds minimal PQC-only OpenSSL 3.5.0+ with static linking, disabled legacy features (TLS/SSL, classical crypto), and
+size optimization (`-Os`, `-flto`). Outputs `libcrypto.a`, headers, and binary to `openssl-build/install/`.
 
 ### Runtime Library Loading
 
 Uses platform-specific rpath for bundled libraries:
+
 - **macOS**: `-Wl,-rpath,@loader_path/../alkindi.libs`
 - **Linux**: `-Wl,-rpath,$ORIGIN/../alkindi.libs`
 - **Windows**: Loaded from same directory or PATH
@@ -127,18 +137,21 @@ Uses platform-specific rpath for bundled libraries:
 **Create → Use → Free in try/finally blocks**
 
 Key principles:
+
 1. Initialize OpenSSL objects to `ffi.NULL` for safe cleanup checks
 2. Always free resources in `finally` blocks (prevents memory leaks)
 3. Copy data to Python bytes before returning: `bytes(ffi.buffer(...))`
 4. No dangling references to C objects
 
 **Memory Model**:
+
 - **C-side**: OpenSSL objects (e.g., `EVP_PKEY`) must be explicitly freed
 - **Python-side**: CFFI buffers (e.g., `ffi.new("unsigned char[]", size)`) are garbage collected
 
 ### Error Handling Strategy
 
 **Three-layer approach**:
+
 1. **Input Validation** (Python): Check algorithm names, parameter limits → raises `AlkindiAPIError`
 2. **OpenSSL Checks** (CFFI): Validate return values and pointers → raises `OpenSSLError` with error queue details
 3. **Resource Cleanup** (always): Use try/finally blocks to prevent leaks
@@ -146,6 +159,7 @@ Key principles:
 ## Thread Safety
 
 **Stateless design**:
+
 - All methods are static with no shared state or class variables
 - Each operation creates its own OpenSSL contexts
 - Operations clean up before returning
@@ -157,6 +171,7 @@ Key principles:
 ## Testing Strategy
 
 **Four-layer approach**:
+
 1. **Correctness** (`tests/correctness/`): Basic functionality, round-trip operations, error cases, thread safety
 2. **Property-Based** (`tests/property/`): Hypothesis-generated cases, invariants, size consistency
 3. **Fuzzing** (`tests/fuzzing/`): Random inputs, edge cases, graceful error handling
@@ -168,15 +183,22 @@ Key principles:
 
 **Why CFFI over ctypes?**
 
-CFFI provides better type safety, automatic header parsing, cleaner code generation, and is the industry standard for C bindings. It generates more efficient code and provides better error messages during compilation. While ctypes is part of the Python standard library, it's more verbose, error-prone, and lacks compile-time type checking.
+CFFI provides better type safety, automatic header parsing, cleaner code generation, and is the industry standard for C
+bindings. It generates more efficient code and provides better error messages during compilation. While ctypes is part
+of the Python standard library, it's more verbose, error-prone, and lacks compile-time type checking.
 
 **Why bundle OpenSSL?**
 
-Bundling ensures PQC support (not all system OpenSSL versions have it), provides version consistency across platforms, enables minimal builds for smaller size, and gives full control over configuration and security. This approach guarantees that users get the same cryptographic functionality regardless of their system's OpenSSL installation. System OpenSSL has inconsistent PQC support and version fragmentation, which would make the library unreliable across different environments.
+Bundling ensures PQC support (not all system OpenSSL versions have it), provides version consistency across platforms,
+enables minimal builds for smaller size, and gives full control over configuration and security. This approach
+guarantees that users get the same cryptographic functionality regardless of their system's OpenSSL installation. System
+OpenSSL has inconsistent PQC support and version fragmentation, which would make the library unreliable across different
+environments.
 
 ## Contributing
 
-Read this document, follow existing patterns, add tests for all new functionality, update documentation for user-facing changes, and run the full test suite before submitting. See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed guidelines.
+Read this document, follow existing patterns, add tests for all new functionality, update documentation for user-facing
+changes, and run the full test suite before submitting. See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed guidelines.
 
 ## References
 

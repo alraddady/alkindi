@@ -35,7 +35,7 @@ OPENSSL_INSTALL = os.environ.get(
 )
 
 if platform.system() != "Windows" and os.path.exists(
-    os.path.join(OPENSSL_INSTALL, "lib64")
+        os.path.join(OPENSSL_INSTALL, "lib64")
 ):
     OPENSSL_LIB = os.path.join(OPENSSL_INSTALL, "lib64")
 else:
@@ -401,10 +401,10 @@ if platform.system() == "Windows":
     # Windows requires explicit linking against system support libraries.
     extra_link_args.extend(
         [
-            "ws2_32.lib",    # Winsock
+            "ws2_32.lib",  # Winsock
             "advapi32.lib",  # Advanced Windows API
-            "crypt32.lib",   # Cryptography API
-            "user32.lib",    # User interface functions
+            "crypt32.lib",  # Cryptography API
+            "user32.lib",  # User interface functions
         ]
     )
 
