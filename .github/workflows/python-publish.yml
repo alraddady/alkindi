@@ -60,12 +60,12 @@ jobs:
           CIBW_BEFORE_ALL_WINDOWS: powershell -ExecutionPolicy Bypass -File {project}\scripts\build_openssl_windows.ps1
 
           CIBW_ENVIRONMENT_LINUX: >
-            OPENSSL_DIR=$PWD/openssl-build/install
-            PKG_CONFIG_PATH=$PWD/openssl-build/install/lib64/pkgconfig:$PWD/openssl-build/install/lib/pkgconfig
+            OPENSSL_DIR=$PWD/scripts/openssl-build/install
+            PKG_CONFIG_PATH=$PWD/scripts/openssl-build/install/lib64/pkgconfig:$PWD/scripts/openssl-build/install/lib/pkgconfig
           CIBW_ENVIRONMENT_MACOS: >
             MACOSX_DEPLOYMENT_TARGET=14.0
-            OPENSSL_DIR=$PWD/openssl-build/install
-            PKG_CONFIG_PATH=$PWD/openssl-build/install/lib/pkgconfig
+            OPENSSL_DIR=$PWD/scripts/openssl-build/install
+            PKG_CONFIG_PATH=$PWD/scripts/openssl-build/install/lib/pkgconfig
           CIBW_ENVIRONMENT_WINDOWS: OPENSSL_DIR="{project}\\scripts\\openssl-build\\install"
 
           CIBW_TEST_COMMAND: python -c "import alkindi; import _alkindi_; from alkindi import KEM, Signature; print('Import successful')"
