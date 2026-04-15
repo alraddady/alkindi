@@ -44,6 +44,6 @@ def test_context_not_bytes(mldsa_algorithm, mldsa_keypair):
 
 
 def test_algorithm_name_is_case_insensitive():
-    from alkindi._params import MLDSA_PARAMS
+    from alkindi._internal.params import MLDSA_PARAMS
     kp = Signature.generate_keypair("ml-dsa-44")
     assert len(kp.public_key) == MLDSA_PARAMS["ML-DSA-44"]["public_key_size"]

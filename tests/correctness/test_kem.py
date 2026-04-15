@@ -1,7 +1,7 @@
 """Correctness tests for ML-KEM — key sizes, round trips, seed determinism."""
 
 from alkindi import KEM
-from alkindi._params import MLKEM_PARAMS
+from alkindi._internal.params import MLKEM_PARAMS
 
 
 def test_public_key_size(kem_algorithm, kem_keypair):

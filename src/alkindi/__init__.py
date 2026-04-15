@@ -1,4 +1,4 @@
-from alkindi.exceptions import (
+from alkindi._internal.exceptions import (
     AlkindiError,
     OpenSSLError,
     AlkindiAPIError,

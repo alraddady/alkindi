@@ -1,7 +1,7 @@
 """Correctness tests for ML-DSA and SLH-DSA — key sizes, sign/verify round trips, context."""
 
 from alkindi import Signature
-from alkindi._params import MLDSA_PARAMS
+from alkindi._internal.params import MLDSA_PARAMS
 
 MESSAGE = b"the quick brown fox jumps over the lazy dog"
 

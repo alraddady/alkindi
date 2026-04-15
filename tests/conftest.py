@@ -3,7 +3,7 @@
 import pytest
 
 from alkindi import KEM, Signature
-from alkindi._params import MLDSA_PARAMS, MLKEM_PARAMS
+from alkindi._internal.params import MLDSA_PARAMS, MLKEM_PARAMS
 
 MESSAGE = b"the quick brown fox jumps over the lazy dog"
 

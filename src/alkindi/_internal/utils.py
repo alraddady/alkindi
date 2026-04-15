@@ -7,7 +7,7 @@ from __future__ import annotations
 from _alkindi_ import ffi, lib
 from typing import Any, Type
 
-from alkindi.exceptions import AlkindiError, OpenSSLError
+from alkindi._internal.exceptions import AlkindiError, OpenSSLError
 
 
 def check_openssl_errors(

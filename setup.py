@@ -12,6 +12,6 @@ class BinaryDistribution(Distribution):
 
 
 setup(
-    cffi_modules=["src/alkindi/bindings.py:ffibuilder"],
+    cffi_modules=["src/alkindi/_internal/bindings.py:ffibuilder"],
     distclass=BinaryDistribution,
 )

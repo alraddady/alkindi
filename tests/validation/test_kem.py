@@ -46,6 +46,6 @@ def test_seed_not_bytes(kem_algorithm):
 
 
 def test_algorithm_name_is_case_insensitive():
-    from alkindi._params import MLKEM_PARAMS
+    from alkindi._internal.params import MLKEM_PARAMS
     kp = KEM.generate_keypair("ml-kem-768")
     assert len(kp.public_key) == MLKEM_PARAMS["ML-KEM-768"]["public_key_size"]

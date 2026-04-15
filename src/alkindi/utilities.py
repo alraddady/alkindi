@@ -4,7 +4,7 @@ This module provides helper functions to query information about supported
 post-quantum algorithms across both KEM and signature schemes.
 """
 
-from alkindi._params import MLKEM_PARAMS, MLDSA_PARAMS, SLHDSA_PARAMS
+from alkindi._internal.params import MLKEM_PARAMS, MLDSA_PARAMS, SLHDSA_PARAMS
 
 _SECURITY_LEVELS = {
     "ML-KEM-512": (1, 128),

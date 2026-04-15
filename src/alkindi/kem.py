@@ -19,9 +19,9 @@ Memory Safety
 from _alkindi_ import ffi, lib
 from typing import NamedTuple, Tuple
 
-from alkindi._params import SUPPORTED_KEM_ALGORITHMS
-from alkindi._utils import check_openssl_errors
-from alkindi.exceptions import AlkindiAPIError, OpenSSLError
+from alkindi._internal.params import SUPPORTED_KEM_ALGORITHMS
+from alkindi._internal.utils import check_openssl_errors
+from alkindi._internal.exceptions import AlkindiAPIError, OpenSSLError
 
 
 class KeyPair(NamedTuple):

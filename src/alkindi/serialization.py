@@ -26,9 +26,9 @@ Memory Safety
 
 from _alkindi_ import ffi, lib
 
-from alkindi._params import ALL_SUPPORTED_ALGORITHMS
-from alkindi._utils import check_openssl_errors
-from alkindi.exceptions import AlkindiAPIError, OpenSSLError
+from alkindi._internal.params import ALL_SUPPORTED_ALGORITHMS
+from alkindi._internal.utils import check_openssl_errors
+from alkindi._internal.exceptions import AlkindiAPIError, OpenSSLError
 
 # EVP_PKEY selection constants (openssl/evp.h)
 # EVP_PKEY_PUBLIC_KEY = OSSL_KEYMGMT_SELECT_DOMAIN_PARAMETERS (0x04)

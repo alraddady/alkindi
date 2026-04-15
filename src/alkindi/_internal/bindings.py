@@ -27,7 +27,20 @@ import platform
 from cffi import FFI
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-PROJECT_ROOT = os.path.join(SCRIPT_DIR, "..", "..")
+
+
+def _find_project_root(start: str) -> str:
+    path = start
+    while True:
+        if os.path.exists(os.path.join(path, "pyproject.toml")):
+            return path
+        parent = os.path.dirname(path)
+        if parent == path:
+            raise RuntimeError("Could not locate project root (no pyproject.toml found)")
+        path = parent
+
+
+PROJECT_ROOT = _find_project_root(SCRIPT_DIR)
 
 OPENSSL_INSTALL = os.environ.get(
     "OPENSSL_DIR",
