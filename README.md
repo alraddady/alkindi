@@ -2,7 +2,7 @@
 
 # Alkindi
 
-In honor of Alkindi (الكِندي), the 9th-century pioneer of cryptography*
+In honor of Alkindi (الكِندي), the 9th-century pioneer of cryptography
 
 [![Status: Alpha](https://img.shields.io/badge/status-alpha-orange)](https://github.com/alraddady/alkindi)
 [![License: Apache-2.0](https://img.shields.io/github/license/alraddady/alkindi)](LICENSE)
@@ -20,7 +20,8 @@ In honor of Alkindi (الكِندي), the 9th-century pioneer of cryptography*
 - [Installation](#installation)
 - [Quick Start](#quick-start)
     - [Key Encapsulation (ML-KEM)](#key-encapsulation-ml-kem)
-    - [Digital Signatures (ML-DSA)](#digital-signatures-ml-dsa)
+    - [Digital Signatures (ML-DSA / SLH-DSA)](#digital-signatures-ml-dsa--slh-dsa)
+    - [Key Serialization (DER/PEM)](#key-serialization-derpem)
 - [Documentation](#documentation)
 - [Contributing](#contributing)
 - [License](#license)
@@ -55,7 +56,7 @@ primitives needed to protect against both classical and quantum attacks.
   speed or size.
 
 Alkindi uses **CFFI** to interface directly with OpenSSL's C implementations, achieving high performance with minimal
-overhead. The library provides a stateless, thread-safe API with full type annotations for enhanced developer
+overhead. The library provides a thread-safe API with full type annotations for enhanced developer
 experience.
 
 
@@ -74,7 +75,7 @@ NIST-standardized post-quantum algorithms to your applications with production r
 | **Battle-tested backend**  | Built on OpenSSL, leveraging decades of cryptographic engineering and security audits rather than implementing algorithms from scratch. |
 | **Standards-first**        | Uses NIST-standardized post-quantum algorithms exclusively and avoids experimental or pre-standard variants.                            |
 | **High performance**       | CFFI-based bindings call OpenSSL directly, achieving near-native C performance with minimal Python overhead.                            |
-| **Type-safe, simple API**  | Full type hints and a stateless, thread-safe design for safer concurrent usage and superior developer experience.                       |
+| **Type-safe, simple API**  | Full type hints and a thread-safe design for safer concurrent usage and superior developer experience.                       |
 | **Minimal attack surface** | A deliberately focused API that is easier to reason about, audit, and review than a sprawling cryptographic toolkit.                    |
 
 ---
@@ -112,9 +113,6 @@ pip install -e ".[dev]"
 
 ### Key Encapsulation (ML-KEM)
 
-ML-KEM enables two parties to establish a shared secret over an insecure channel. The sender encapsulates a secret into
-a ciphertext using the receiver's public key, and the receiver decapsulates it to recover the same secret.
-
 ```python
 from alkindi import KEM
 
@@ -131,12 +129,22 @@ shared_secret_receiver = KEM.decapsulate("ML-KEM-768", keypair.private_key, ciph
 assert shared_secret_sender == shared_secret_receiver
 ```
 
+#### Deterministic Key Generation
+
+Pass a 64-byte seed to produce the same keypair every time. The seed is the concatenation of the two FIPS 203 internal seeds `d || z`.
+
+```python
+import os
+
+seed = os.urandom(64)
+keypair = KEM.generate_keypair("ML-KEM-768", seed=seed)
+keypair2 = KEM.generate_keypair("ML-KEM-768", seed=seed)
+assert keypair.public_key == keypair2.public_key
+```
+
 ---
 
-### Digital Signatures (ML-DSA)
-
-ML-DSA provides digital signatures for authentication and message integrity. A signer uses their private key to sign
-messages, and verifiers use the corresponding public key to confirm authenticity.
+### Digital Signatures (ML-DSA / SLH-DSA)
 
 ```python
 from alkindi import Signature
@@ -156,6 +164,45 @@ print(f"Signature valid: {is_valid}")  # True
 is_valid = Signature.verify("ML-DSA-65", keypair.public_key, b"Tampered message", signature)
 print(f"Tampered signature valid: {is_valid}")  # False
 ```
+
+#### Context Strings
+
+ML-DSA and SLH-DSA support an optional context string (up to 255 bytes) that is cryptographically bound to the signature. The same context must be supplied at both signing and verification time.
+
+```python
+ctx = b"the quick brown fox jumps over the lazy dog"
+signature = Signature.sign("ML-DSA-65", keypair.private_key, message, context=ctx)
+
+# Verification succeeds only with the correct context
+Signature.verify("ML-DSA-65", keypair.public_key, message, signature, context=ctx)   # True
+Signature.verify("ML-DSA-65", keypair.public_key, message, signature)                 # False
+```
+
+---
+
+### Key Serialization (DER/PEM)
+
+`Keys` converts raw key bytes to and from standard wire formats for storage and interoperability:
+
+- **Public keys** → SubjectPublicKeyInfo (SPKI / X.509)
+- **Private keys** → PKCS#8 PrivateKeyInfo (unencrypted)
+
+```python
+from alkindi import KEM, Keys
+
+keypair = KEM.generate_keypair("ML-KEM-768")
+keys = Keys("ML-KEM-768")
+
+# Export to DER or PEM
+public_pem  = keys.public_key_to_pem(keypair.public_key)
+private_der = keys.private_key_to_der(keypair.private_key)
+
+# Import back to raw bytes
+public_key  = keys.public_key_from_pem(public_pem)
+private_key = keys.private_key_from_der(private_der)
+```
+
+`Keys` works with all ML-KEM, ML-DSA, and SLH-DSA algorithms. Bind it once to an algorithm, then call encode/decode methods without repeating the algorithm name.
 
 ---
 

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "alkindi"
-version = "0.0.2"
+version = "0.0.3"
 description = "Python bindings for NIST-standardized post-quantum cryptography, powered by OpenSSL. Honoring Alkindi, the 9th-century pioneer of cryptography."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -12,6 +12,9 @@ license = "Apache-2.0"
 authors = [{ name = "Khalid Alraddady" }]
 
 dependencies = ["cffi>=2.0"]
+
+[project.optional-dependencies]
+dev = ["pytest>=9.0"]
 
 [project.urls]
 Repository = "https://github.com/alraddady/alkindi"
@@ -26,3 +29,6 @@ where = ["src"]
 
 [tool.setuptools.package-data]
 alkindi = ["py.typed"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
