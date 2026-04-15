@@ -4,6 +4,7 @@ from alkindi.exceptions import (
     AlkindiAPIError,
 )
 from alkindi.kem import KEM
+from alkindi.serialization import Keys
 from alkindi.signatures import Signature
 from alkindi.utilities import (
     guide,
@@ -12,6 +13,7 @@ from alkindi.utilities import (
 __all__ = [
     # Main classes
     "KEM",
+    "Keys",
     "Signature",
     # Exceptions
     "AlkindiError",
