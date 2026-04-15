@@ -389,6 +389,160 @@ ffibuilder.cdef("""
      */
     void OPENSSL_cleanse(void *ptr, size_t len);
 
+    /**
+     * Frees memory allocated by OpenSSL (e.g., encoder output buffers).
+     *
+     * @param addr Pointer to free (NULL is safe)
+     */
+    void OPENSSL_free(void *addr);
+
+
+    /******************************************************************
+     *                                                                *
+     *                        OSSL_PARAM Support                      *
+     *                                                                *
+     ******************************************************************/
+
+    /**
+     * Generic parameter carrier used to pass named typed values to/from
+     * OpenSSL operations (key generation params, signature context, etc.).
+     *
+     * Build arrays with OSSL_PARAM_construct_* helpers and terminate with
+     * OSSL_PARAM_construct_end(). The data pointer inside each entry must
+     * remain valid for the lifetime of the param array.
+     */
+    typedef struct ossl_param_st {
+        const char    *key;
+        unsigned int   data_type;
+        void          *data;
+        size_t         data_size;
+        size_t         return_size;
+    } OSSL_PARAM;
+
+    /**
+     * Constructs an octet-string parameter entry.
+     *
+     * @param key   Parameter name (e.g., "seed", "context-string")
+     * @param buf   Pointer to the data buffer
+     * @param bsize Length of the data buffer
+     * @return Populated OSSL_PARAM struct (returned by value)
+     */
+    OSSL_PARAM OSSL_PARAM_construct_octet_string(const char *key, void *buf,
+                                                 size_t bsize);
+
+    /**
+     * Constructs the sentinel that terminates an OSSL_PARAM array.
+     *
+     * @return Terminator OSSL_PARAM (returned by value)
+     */
+    OSSL_PARAM OSSL_PARAM_construct_end(void);
+
+    /**
+     * Applies a parameter array to a key context.
+     * Used to set algorithm-specific parameters (e.g., ML-KEM seed,
+     * ML-DSA context string) before or after an operation init call.
+     *
+     * @param ctx    Key context to configure
+     * @param params NULL-terminated OSSL_PARAM array
+     * @return 1 on success, 0 or negative on error
+     */
+    int EVP_PKEY_CTX_set_params(EVP_PKEY_CTX *ctx, const OSSL_PARAM *params);
+
+
+    /******************************************************************
+     *                                                                *
+     *                     Key Serialization (Encoder)                *
+     *                                                                *
+     ******************************************************************/
+
+    /**
+     * Opaque encoder context.
+     */
+    typedef struct ossl_encoder_ctx_st OSSL_ENCODER_CTX;
+
+    /**
+     * Creates an encoder context for a given key and output format.
+     *
+     * @param pkey      Key to encode
+     * @param selection EVP_PKEY_PUBLIC_KEY or EVP_PKEY_KEYPAIR
+     * @param output_type   "DER" or "PEM"
+     * @param output_struct "SubjectPublicKeyInfo" or "PrivateKeyInfo"
+     * @param propquery Property query (NULL for default)
+     * @return New context or NULL on error
+     */
+    OSSL_ENCODER_CTX *OSSL_ENCODER_CTX_new_for_pkey(
+        const EVP_PKEY *pkey, int selection,
+        const char *output_type, const char *output_struct,
+        const char *propquery);
+
+    /**
+     * Encodes the key into a newly-allocated buffer.
+     * Caller must free *pdata with OPENSSL_free().
+     *
+     * @param ctx      Initialized encoder context
+     * @param pdata    Output: pointer to allocated buffer
+     * @param pdata_len Output: length of encoded data
+     * @return 1 on success, 0 on error
+     */
+    int OSSL_ENCODER_to_data(OSSL_ENCODER_CTX *ctx,
+        unsigned char **pdata, size_t *pdata_len);
+
+    /**
+     * Frees an encoder context.
+     *
+     * @param ctx Context to free
+     */
+    void OSSL_ENCODER_CTX_free(OSSL_ENCODER_CTX *ctx);
+
+
+    /******************************************************************
+     *                                                                *
+     *                     Key Deserialization (Decoder)              *
+     *                                                                *
+     ******************************************************************/
+
+    /**
+     * Opaque decoder context.
+     */
+    typedef struct ossl_decoder_ctx_st OSSL_DECODER_CTX;
+
+    /**
+     * Creates a decoder context that will produce an EVP_PKEY.
+     *
+     * @param pkey       Output: decoded key is stored here
+     * @param input_type "DER" or "PEM"
+     * @param input_struct "SubjectPublicKeyInfo" or "PrivateKeyInfo" (NULL to auto-detect)
+     * @param keytype    Algorithm name (e.g., "ML-KEM-768"), or NULL to auto-detect
+     * @param selection  EVP_PKEY_PUBLIC_KEY or EVP_PKEY_KEYPAIR
+     * @param libctx     Library context (NULL for default)
+     * @param propquery  Property query (NULL for default)
+     * @return New context or NULL on error
+     */
+    OSSL_DECODER_CTX *OSSL_DECODER_CTX_new_for_pkey(
+        EVP_PKEY **pkey,
+        const char *input_type, const char *input_struct,
+        const char *keytype, int selection,
+        void *libctx, const char *propquery);
+
+    /**
+     * Decodes key data from a buffer.
+     * *pdata is advanced past the consumed bytes on success.
+     *
+     * @param ctx    Initialized decoder context
+     * @param pdata  Pointer to input buffer pointer
+     * @param pdata_len Pointer to remaining length
+     * @return 1 on success, 0 on error
+     */
+    int OSSL_DECODER_from_data(OSSL_DECODER_CTX *ctx,
+        const unsigned char **pdata, size_t *pdata_len);
+
+    /**
+     * Frees a decoder context.
+     *
+     * @param ctx Context to free
+     */
+    void OSSL_DECODER_CTX_free(OSSL_DECODER_CTX *ctx);
+
 
 """)
 
@@ -420,9 +574,9 @@ ffibuilder.set_source(
     #include <openssl/evp.h>
     #include <openssl/err.h>
     #include <openssl/crypto.h>
-    #include <openssl/provider.h>
     #include <openssl/params.h>
-    #include <openssl/core_names.h>
+    #include <openssl/encoder.h>
+    #include <openssl/decoder.h>
     """,
     include_dirs=[OPENSSL_INCLUDE],
     library_dirs=[OPENSSL_LIB],
