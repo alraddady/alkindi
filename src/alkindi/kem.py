@@ -36,7 +36,7 @@ class KEM:
     """
 
     @staticmethod
-    def generate_keypair(algorithm: str) -> KeyPair:
+    def generate_keypair(algorithm: str, seed: bytes = None) -> KeyPair:
         """
         Generate a new ML-KEM keypair.
 
@@ -45,12 +45,15 @@ class KEM:
 
         Args:
             algorithm: ML-KEM algorithm name ('ML-KEM-512', 'ML-KEM-768', 'ML-KEM-1024')
+            seed: Optional 64-byte deterministic seed (32-byte d || 32-byte z from
+                  FIPS 203). If omitted, OpenSSL generates a random seed. Providing
+                  the same seed always produces the same keypair.
 
         Returns:
             KeyPair(public_key: bytes, private_key: bytes)
 
         Raises:
-            AlkindiAPIError: If algorithm is not supported
+            AlkindiAPIError: If algorithm is not supported or seed has wrong length
             OpenSSLError: If OpenSSL key generation fails
 
         Security Note:
@@ -73,6 +76,16 @@ class KEM:
                 "See the Alkindi documentation for valid options."
             )
 
+        if seed is not None:
+            if not isinstance(seed, bytes):
+                raise AlkindiAPIError(
+                    f"seed must be bytes, got {type(seed).__name__}"
+                )
+            if len(seed) != 64:
+                raise AlkindiAPIError(
+                    f"seed must be exactly 64 bytes, got {len(seed)}"
+                )
+
         algorithm_name_in_bytes: bytes = algorithm.encode("ascii")
 
         ctx = ffi.NULL
@@ -92,6 +105,16 @@ class KEM:
 
             result: int = lib.EVP_PKEY_keygen_init(ctx)
             check_openssl_errors(result, "Key generation init", OpenSSLError)
+
+            if seed is not None:
+                seed_buf = ffi.from_buffer("unsigned char[]", seed)
+                params = ffi.new("OSSL_PARAM[2]")
+                params[0] = lib.OSSL_PARAM_construct_octet_string(
+                    b"seed", seed_buf, len(seed)
+                )
+                params[1] = lib.OSSL_PARAM_construct_end()
+                result = lib.EVP_PKEY_CTX_set_params(ctx, params)
+                check_openssl_errors(result, "Setting seed parameter", OpenSSLError)
 
             pkey_ptr = ffi.new("EVP_PKEY **")
             result = lib.EVP_PKEY_keygen(ctx, pkey_ptr)
