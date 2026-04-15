@@ -117,7 +117,10 @@ class Signature:
                 lib.EVP_PKEY_CTX_free(ctx)
 
     @staticmethod
-    def sign(algorithm: str, private_key: bytes, message: bytes) -> bytes:
+    def sign(
+            algorithm: str, private_key: bytes, message: bytes,
+            context: bytes = None,
+    ) -> bytes:
         """
         Sign a message with a private key.
 
@@ -131,13 +134,17 @@ class Signature:
                 Signer's private key as raw bytes (as returned by generate_keypair()).
             message:
                 Message to sign, as raw bytes.
+            context:
+                Optional context string (up to 255 bytes). Supported by ML-DSA and
+                SLH-DSA. The same context must be supplied during verification.
+                Defaults to empty (no context).
 
         Returns:
             Digital signature as bytes.
 
         Raises:
             AlkindiAPIError:
-                If the algorithm name is not supported.
+                If the algorithm name is not supported or context exceeds 255 bytes.
             OpenSSLError:
                 If key import or signing fails at the OpenSSL layer.
         """
@@ -158,6 +165,16 @@ class Signature:
             raise AlkindiAPIError(
                 f"message must be bytes, got {type(message).__name__}"
             )
+
+        if context is not None:
+            if not isinstance(context, bytes):
+                raise AlkindiAPIError(
+                    f"context must be bytes, got {type(context).__name__}"
+                )
+            if len(context) > 255:
+                raise AlkindiAPIError(
+                    f"context must be at most 255 bytes, got {len(context)}"
+                )
 
         algorithm_name_in_bytes: bytes = algorithm.encode("ascii")
 
@@ -183,9 +200,14 @@ class Signature:
             if md_ctx == ffi.NULL:
                 raise OpenSSLError("Failed to create message digest context")
 
+            if context is not None:
+                pctx_ptr = ffi.new("EVP_PKEY_CTX **")
+            else:
+                pctx_ptr = ffi.NULL
+
             result: int = lib.EVP_DigestSignInit_ex(
                 md_ctx,
-                ffi.NULL,
+                pctx_ptr,
                 ffi.NULL,
                 ffi.NULL,
                 ffi.NULL,
@@ -193,6 +215,16 @@ class Signature:
                 ffi.NULL,
             )
             check_openssl_errors(result, "Signature initialization", OpenSSLError)
+
+            if context is not None:
+                ctx_buf = ffi.from_buffer("unsigned char[]", context)
+                params = ffi.new("OSSL_PARAM[2]")
+                params[0] = lib.OSSL_PARAM_construct_octet_string(
+                    b"context-string", ctx_buf, len(context)
+                )
+                params[1] = lib.OSSL_PARAM_construct_end()
+                result = lib.EVP_PKEY_CTX_set_params(pctx_ptr[0], params)
+                check_openssl_errors(result, "Setting context parameter", OpenSSLError)
 
             sig_len = ffi.new("size_t *")
             result = lib.EVP_DigestSign(
@@ -224,7 +256,8 @@ class Signature:
 
     @staticmethod
     def verify(
-            algorithm: str, public_key: bytes, message: bytes, signature: bytes
+            algorithm: str, public_key: bytes, message: bytes, signature: bytes,
+            context: bytes = None,
     ) -> bool:
         """
         Verify a digital signature.
@@ -241,13 +274,16 @@ class Signature:
                 Original message bytes.
             signature:
                 Signature bytes produced by sign().
+            context:
+                Optional context string (up to 255 bytes). Must match the context
+                used during signing exactly.
 
         Returns:
             True if the signature is valid, False if invalid.
 
         Raises:
             AlkindiAPIError:
-                If the algorithm name is not supported.
+                If the algorithm name is not supported or context exceeds 255 bytes.
             OpenSSLError:
                 If verification fails due to an OpenSSL error (as opposed to
                 a simple "invalid signature" result).
@@ -276,6 +312,16 @@ class Signature:
                 f"signature must be bytes, got {type(signature).__name__}"
             )
 
+        if context is not None:
+            if not isinstance(context, bytes):
+                raise AlkindiAPIError(
+                    f"context must be bytes, got {type(context).__name__}"
+                )
+            if len(context) > 255:
+                raise AlkindiAPIError(
+                    f"context must be at most 255 bytes, got {len(context)}"
+                )
+
         algorithm_name_in_bytes: bytes = algorithm.encode("ascii")
 
         pkey = ffi.NULL
@@ -300,9 +346,14 @@ class Signature:
             if md_ctx == ffi.NULL:
                 raise OpenSSLError("Failed to create message digest context")
 
+            if context is not None:
+                pctx_ptr = ffi.new("EVP_PKEY_CTX **")
+            else:
+                pctx_ptr = ffi.NULL
+
             result: int = lib.EVP_DigestVerifyInit_ex(
                 md_ctx,
-                ffi.NULL,
+                pctx_ptr,
                 ffi.NULL,
                 ffi.NULL,
                 ffi.NULL,
@@ -314,6 +365,16 @@ class Signature:
                 "Signature verification initialization",
                 OpenSSLError,
             )
+
+            if context is not None:
+                ctx_buf = ffi.from_buffer("unsigned char[]", context)
+                params = ffi.new("OSSL_PARAM[2]")
+                params[0] = lib.OSSL_PARAM_construct_octet_string(
+                    b"context-string", ctx_buf, len(context)
+                )
+                params[1] = lib.OSSL_PARAM_construct_end()
+                result = lib.EVP_PKEY_CTX_set_params(pctx_ptr[0], params)
+                check_openssl_errors(result, "Setting context parameter", OpenSSLError)
 
             result = lib.EVP_DigestVerify(
                 md_ctx,
