@@ -32,16 +32,16 @@ jobs:
           - { os: windows-2025, arch: AMD64 }
 
     steps:
-      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
-      - uses: actions/setup-python@83679a892e2d95755f2dac6acb0bfd1e9ac5d548
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
         with:
           python-version: "3.13"
           cache: "pip"
 
       - name: Set up QEMU for Linux ARM64
         if: matrix.arch == 'aarch64' && runner.os == 'Linux'
-        uses: docker/setup-qemu-action@v3
+        uses: docker/setup-qemu-action@ce360397dd3f832beb865e1373c09c0e9f86d70a # v4.0.0
         with:
           platforms: arm64
 
@@ -66,9 +66,7 @@ jobs:
             MACOSX_DEPLOYMENT_TARGET=14.0
             OPENSSL_DIR=$PWD/scripts/openssl-build/install
             PKG_CONFIG_PATH=$PWD/scripts/openssl-build/install/lib/pkgconfig
-          CIBW_ENVIRONMENT_WINDOWS: OPENSSL_DIR="{project}\\scripts\\openssl-build\\install"
-
-          CIBW_TEST_COMMAND: python -c "import alkindi; import _alkindi_; from alkindi import KEM, Signature; print('Import successful')"
+          CIBW_TEST_COMMAND: pip install pytest && pytest {project}/tests
           CIBW_BUILD_VERBOSITY: 1
 
           CIBW_REPAIR_WHEEL_COMMAND_LINUX: auditwheel repair -w {dest_dir} {wheel}
@@ -81,7 +79,7 @@ jobs:
           twine check dist/*.whl
 
       - name: Upload wheels
-        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: wheels-${{ matrix.os }}-${{ matrix.arch }}
           path: dist/*.whl
@@ -97,13 +95,13 @@ jobs:
       url: https://pypi.org/project/alkindi/
 
     steps:
-      - uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           path: dist/
           merge-multiple: true
 
       - name: Publish to PyPI
-        uses: pypa/gh-action-pypi-publish@ed0c53931b1dc9bd32cbe73a98c7f6766f8a527e
+        uses: pypa/gh-action-pypi-publish@cef221092ed1bacb1cc03d23a2d87d1d172e277b # v1.14.0
 
   publish-testpypi:
     name: Publish to TestPyPI
@@ -116,12 +114,12 @@ jobs:
       url: https://test.pypi.org/project/alkindi/
 
     steps:
-      - uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           path: dist/
           merge-multiple: true
 
       - name: Publish to TestPyPI
-        uses: pypa/gh-action-pypi-publish@ed0c53931b1dc9bd32cbe73a98c7f6766f8a527e
+        uses: pypa/gh-action-pypi-publish@cef221092ed1bacb1cc03d23a2d87d1d172e277b # v1.14.0
         with:
           repository-url: https://test.pypi.org/
