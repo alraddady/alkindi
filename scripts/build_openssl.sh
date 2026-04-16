@@ -88,7 +88,7 @@ download_openssl() {
     if [ -f "openssl-${OPENSSL_VERSION}.tar.gz" ]; then
         echo_info "OpenSSL tarball already exists, skipping download."
     else
-        curl -L -o "openssl-${OPENSSL_VERSION}.tar.gz" "${OPENSSL_URL}"
+        curl -L --retry 3 --retry-delay 5 -o "openssl-${OPENSSL_VERSION}.tar.gz" "${OPENSSL_URL}"
         echo_info "Download complete."
     fi
 

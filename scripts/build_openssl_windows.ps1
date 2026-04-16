@@ -69,7 +69,17 @@ $Url     = "https://github.com/openssl/openssl/releases/download/openssl-$OpenSs
 
 if (-not (Test-Path $TarPath)) {
     Write-Host "[INFO] Downloading OpenSSL $OpenSslVersion..."
-    Invoke-WebRequest -Uri $Url -OutFile $TarPath -UseBasicParsing
+    $retries = 3
+    for ($i = 1; $i -le $retries; $i++) {
+        try {
+            Invoke-WebRequest -Uri $Url -OutFile $TarPath -UseBasicParsing
+            break
+        } catch {
+            Write-Host "[WARN] Download attempt $i/$retries failed: $_"
+            if ($i -eq $retries) { throw }
+            Start-Sleep -Seconds 5
+        }
+    }
 } else {
     Write-Host "[INFO] Tarball already present, skipping download."
 }
