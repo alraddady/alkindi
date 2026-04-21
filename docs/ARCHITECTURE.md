@@ -22,15 +22,15 @@ Alkindi provides Python bindings to OpenSSL's post-quantum cryptography via a la
 ┌─────────────────────────────────────────┐
 │        Python Application Code          │
 ├─────────────────────────────────────────┤
-│    High-Level API (KEM, Signature)     │  ← src/alkindi/kem.py, signatures.py
+│    High-Level API (KEM, Signature)      │  ← src/alkindi/kem.py, signatures.py
 ├─────────────────────────────────────────┤
-│   Validation & Error Handling Layer     │  ← src/alkindi/exceptions.py, _utils.py
+│   Validation & Error Handling Layer     │  ← src/alkindi/_internal/exceptions.py, utils.py
 ├─────────────────────────────────────────┤
-│     CFFI-Generated Bindings (_alkindi_) │  ← src/alkindi/bindings.py
+│     CFFI-Generated Bindings (_alkindi_) │  ← src/alkindi/_internal/bindings.py
 ├─────────────────────────────────────────┤
-│          OpenSSL EVP API (C)            │  ← libcrypto.a (bundled)
+│          OpenSSL EVP API (C)            │  ← libcrypto.a (statically linked)
 ├─────────────────────────────────────────┤
-│    PQC Algorithms (ML-KEM, ML-DSA, SLH-DSA) │
+│             PQC Algorithms              │
 └─────────────────────────────────────────┘
 ```
 
@@ -44,35 +44,36 @@ Alkindi provides Python bindings to OpenSSL's post-quantum cryptography via a la
 ## Project Structure
 
 ```
-alkindi-openssl/
+alkindi/
 ├── src/alkindi/              # Main package source
 │   ├── __init__.py           # Package exports and public API
-│   ├── bindings.py           # CFFI bindings generator
 │   ├── kem.py                # ML-KEM implementation
 │   ├── signatures.py         # ML-DSA/SLH-DSA implementation
-│   ├── exceptions.py         # Exception hierarchy
-│   ├── _utils.py             # Internal utilities (error checking)
-│   ├── _params.py            # Algorithm parameters (immutable)
-│   └── utilities.py          # Public utility functions
+│   ├── serialization.py      # DER/PEM key serialization
+│   ├── utilities.py          # Public utility functions
+│   └── _internal/            # Internal implementation details
+│       ├── bindings.py       # CFFI bindings generator
+│       ├── exceptions.py     # Exception hierarchy
+│       ├── utils.py          # Internal utilities (error checking)
+│       └── params.py         # Algorithm parameters (immutable)
 │
 ├── tests/                    # Test suite
-│   ├── correctness/          # Functional tests
-│   ├── property/             # Property-based tests
-│   ├── fuzzing/              # Fuzz tests
-│   └── NIST/                 # NIST ACVP test vectors
+│   ├── correctness/          # Functional and round-trip tests
+│   ├── security/             # Security property tests
+│   └── validation/           # Standards validation tests
 │
 ├── scripts/                  # Build and utility scripts
 │   └── build_openssl.sh      # OpenSSL build script
 │
 ├── pyproject.toml            # Project metadata and configuration
 ├── setup.py                  # Custom build logic
-├── .env                      # OpenSSL version configuration
+├── build.env                 # OpenSSL version configuration
 └── README.md                 # User documentation
 ```
 
 ## Core Components
 
-### 1. CFFI Bindings (`src/alkindi/bindings.py`)
+### 1. CFFI Bindings (`src/alkindi/_internal/bindings.py`)
 
 Generates low-level Python bindings to OpenSSL's C API. Runs at build time to create the `_alkindi_` extension module
 with OpenSSL function declarations, compilation settings, and platform-specific linking.
@@ -86,14 +87,14 @@ validates inputs, creates OpenSSL contexts, performs crypto operations, and clea
 
 ### 3. Digital Signatures (`src/alkindi/signatures.py`)
 
-Provides ML-DSA and SLH-DSA operations: `generate_keypair()`, `sign()`, `verify()`. Supports optional context strings (
-max 255 bytes) per FIPS 204/205.
+Provides ML-DSA and SLH-DSA operations: `generate_keypair()`, `sign()`, `verify()`. Supports optional context strings
+(max 255 bytes) per FIPS 204/205.
 
 **Sign Flow**: Validate → Import key → Create digest context → Sign → Cleanup → Return signature
 
 **Verify Flow**: Validate → Import key → Create digest context → Verify → Return boolean
 
-### 4. Parameters (`src/alkindi/_params.py`)
+### 4. Parameters (`src/alkindi/_internal/params.py`)
 
 Immutable algorithm parameters using `MappingProxyType` and `frozenset`:
 
@@ -101,7 +102,7 @@ Immutable algorithm parameters using `MappingProxyType` and `frozenset`:
 - Thread-safe by design
 - Stores key/ciphertext/signature sizes for all supported algorithms
 
-### 5. Error Handling (`src/alkindi/exceptions.py`, `src/alkindi/_utils.py`)
+### 5. Error Handling (`src/alkindi/_internal/exceptions.py`, `src/alkindi/_internal/utils.py`)
 
 **Exception Hierarchy**: `AlkindiError` → `OpenSSLError` (OpenSSL failures) / `AlkindiAPIError` (API usage errors)
 
@@ -114,21 +115,13 @@ Public helper functions including `guide()` for displaying supported algorithms,
 
 ## Build System
 
-**Build Flow**: `pip install` → setuptools reads `pyproject.toml` → invokes `setup.py` → CFFI generates C extension from
-`bindings.py` → `BuildPyWithLibs` bundles OpenSSL libs to `alkindi.libs/` → package installation
+**Build Flow**: `pip install` → setuptools reads `pyproject.toml` → invokes `setup.py` → CFFI builds `_alkindi_`
+extension with OpenSSL statically linked → package installation
 
 ### OpenSSL Build (`scripts/build_openssl.sh`)
 
-Builds minimal PQC-only OpenSSL 3.5.0+ with static linking, disabled legacy features (TLS/SSL, classical crypto), and
-size optimization (`-Os`, `-flto`). Outputs `libcrypto.a`, headers, and binary to `openssl-build/install/`.
-
-### Runtime Library Loading
-
-Uses platform-specific rpath for bundled libraries:
-
-- **macOS**: `-Wl,-rpath,@loader_path/../alkindi.libs`
-- **Linux**: `-Wl,-rpath,$ORIGIN/../alkindi.libs`
-- **Windows**: Loaded from same directory or PATH
+Builds minimal PQC-only OpenSSL 3.6.2 with static linking, disabled legacy features (TLS/SSL, classical crypto), and
+size optimization (`-Os`, `-flto`). Outputs `libcrypto.a` and headers to `scripts/openssl-build/install/`.
 
 ## Memory & Error Handling
 
@@ -170,35 +163,23 @@ Key principles:
 
 ## Testing Strategy
 
-**Four-layer approach**:
+**Three-layer approach**:
 
 1. **Correctness** (`tests/correctness/`): Basic functionality, round-trip operations, error cases, thread safety
-2. **Property-Based** (`tests/property/`): Hypothesis-generated cases, invariants, size consistency
-3. **Fuzzing** (`tests/fuzzing/`): Random inputs, edge cases, graceful error handling
-4. **NIST ACVP** (`tests/NIST/`): Official test vectors, byte-for-byte validation, standards compliance
-
-**Coverage goals**: >95% line coverage, >90% branch coverage, 100% algorithm coverage
+2. **Security** (`tests/security/`): Security property tests for KEM, signatures, and serialization
+3. **Validation** (`tests/validation/`): Standards compliance, interoperability, and NIST ACVP test vectors *(NIST ACVP planned)*
 
 ## Design Decisions
 
 **Why CFFI over ctypes?**
 
-CFFI provides better type safety, automatic header parsing, cleaner code generation, and is the industry standard for C
-bindings. It generates more efficient code and provides better error messages during compilation. While ctypes is part
-of the Python standard library, it's more verbose, error-prone, and lacks compile-time type checking.
+CFFI provides better type safety, automatic header parsing, and cleaner code generation. ctypes is more verbose,
+error-prone, and lacks compile-time type checking.
 
 **Why bundle OpenSSL?**
 
-Bundling ensures PQC support (not all system OpenSSL versions have it), provides version consistency across platforms,
-enables minimal builds for smaller size, and gives full control over configuration and security. This approach
-guarantees that users get the same cryptographic functionality regardless of their system's OpenSSL installation. System
-OpenSSL has inconsistent PQC support and version fragmentation, which would make the library unreliable across different
-environments.
-
-## Contributing
-
-Read this document, follow existing patterns, add tests for all new functionality, update documentation for user-facing
-changes, and run the full test suite before submitting. See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed guidelines.
+System OpenSSL has inconsistent PQC support across platforms and versions. Bundling a minimal static build guarantees
+the same cryptographic functionality everywhere.
 
 ## References
 

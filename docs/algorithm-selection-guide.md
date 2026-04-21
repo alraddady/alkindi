@@ -150,5 +150,4 @@ In practice:
 - Pick the security level that matches your key exchange and symmetric cipher choices.
 - Pick the hash family that aligns with your existing standards and implementations.
 - Choose `s` variants if bandwidth or storage is tight (smaller signatures, more computation) and `f` variants if CPU
-  time is the main constraint (larger signatures, less computation).
-- 
+  time is the main constraint (larger signatures, less computation). 
