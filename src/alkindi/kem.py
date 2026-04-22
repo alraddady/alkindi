@@ -77,9 +77,9 @@ class KEM:
             )
 
         if seed is not None:
-            if not isinstance(seed, bytes):
+            if not isinstance(seed, (bytes, bytearray, memoryview)):
                 raise AlkindiAPIError(
-                    f"seed must be bytes, got {type(seed).__name__}"
+                    f"seed must be a bytes-like object, got {type(seed).__name__}"
                 )
             if len(seed) != 64:
                 raise AlkindiAPIError(
@@ -189,9 +189,9 @@ class KEM:
                 "See the Alkindi documentation for valid options."
             )
 
-        if not isinstance(public_key, bytes):
+        if not isinstance(public_key, (bytes, bytearray, memoryview)):
             raise AlkindiAPIError(
-                f"public_key must be bytes, got {type(public_key).__name__}"
+                f"public_key must be a bytes-like object, got {type(public_key).__name__}"
             )
 
         algorithm_name_in_bytes: bytes = algorithm.encode("ascii")
@@ -293,14 +293,14 @@ class KEM:
                 "See the Alkindi documentation for valid options."
             )
 
-        if not isinstance(private_key, bytes):
+        if not isinstance(private_key, (bytes, bytearray, memoryview)):
             raise AlkindiAPIError(
-                f"private_key must be bytes, got {type(private_key).__name__}"
+                f"private_key must be a bytes-like object, got {type(private_key).__name__}"
             )
 
-        if not isinstance(ciphertext, bytes):
+        if not isinstance(ciphertext, (bytes, bytearray, memoryview)):
             raise AlkindiAPIError(
-                f"ciphertext must be bytes, got {type(ciphertext).__name__}"
+                f"ciphertext must be a bytes-like object, got {type(ciphertext).__name__}"
             )
 
         algorithm_name_in_bytes: bytes = algorithm.encode("ascii")

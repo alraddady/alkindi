@@ -156,20 +156,20 @@ class Signature:
                 "See the Alkindi documentation for valid options."
             )
 
-        if not isinstance(private_key, bytes):
+        if not isinstance(private_key, (bytes, bytearray, memoryview)):
             raise AlkindiAPIError(
-                f"private_key must be bytes, got {type(private_key).__name__}"
+                f"private_key must be a bytes-like object, got {type(private_key).__name__}"
             )
 
-        if not isinstance(message, bytes):
+        if not isinstance(message, (bytes, bytearray, memoryview)):
             raise AlkindiAPIError(
-                f"message must be bytes, got {type(message).__name__}"
+                f"message must be a bytes-like object, got {type(message).__name__}"
             )
 
         if context is not None:
-            if not isinstance(context, bytes):
+            if not isinstance(context, (bytes, bytearray, memoryview)):
                 raise AlkindiAPIError(
-                    f"context must be bytes, got {type(context).__name__}"
+                    f"context must be a bytes-like object, got {type(context).__name__}"
                 )
             if len(context) > 255:
                 raise AlkindiAPIError(
@@ -297,25 +297,25 @@ class Signature:
                 "See the Alkindi documentation for valid options."
             )
 
-        if not isinstance(public_key, bytes):
+        if not isinstance(public_key, (bytes, bytearray, memoryview)):
             raise AlkindiAPIError(
-                f"public_key must be bytes, got {type(public_key).__name__}"
+                f"public_key must be a bytes-like object, got {type(public_key).__name__}"
             )
 
-        if not isinstance(message, bytes):
+        if not isinstance(message, (bytes, bytearray, memoryview)):
             raise AlkindiAPIError(
-                f"message must be bytes, got {type(message).__name__}"
+                f"message must be a bytes-like object, got {type(message).__name__}"
             )
 
-        if not isinstance(signature, bytes):
+        if not isinstance(signature, (bytes, bytearray, memoryview)):
             raise AlkindiAPIError(
-                f"signature must be bytes, got {type(signature).__name__}"
+                f"signature must be a bytes-like object, got {type(signature).__name__}"
             )
 
         if context is not None:
-            if not isinstance(context, bytes):
+            if not isinstance(context, (bytes, bytearray, memoryview)):
                 raise AlkindiAPIError(
-                    f"context must be bytes, got {type(context).__name__}"
+                    f"context must be a bytes-like object, got {type(context).__name__}"
                 )
             if len(context) > 255:
                 raise AlkindiAPIError(

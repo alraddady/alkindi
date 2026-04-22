@@ -391,7 +391,7 @@ class Keys:
 
 
 def _check_bytes(value: bytes, param_name: str) -> None:
-    if not isinstance(value, bytes):
+    if not isinstance(value, (bytes, bytearray, memoryview)):
         raise AlkindiAPIError(
-            f"{param_name} must be bytes, got {type(value).__name__}"
+            f"{param_name} must be a bytes-like object, got {type(value).__name__}"
         )
