@@ -27,7 +27,7 @@ Memory Safety
 from _alkindi_ import ffi, lib
 
 from alkindi._internal.params import ALL_SUPPORTED_ALGORITHMS
-from alkindi._internal.utils import check_openssl_errors
+from alkindi._internal.utils import check_openssl_errors, to_c_buffer
 from alkindi._internal.exceptions import AlkindiAPIError, OpenSSLError
 
 # EVP_PKEY selection constants (openssl/evp.h)
@@ -68,6 +68,9 @@ def _encode(pkey, selection: int, output_type: bytes, output_struct: bytes) -> b
 
     finally:
         if pdata_ptr[0] != ffi.NULL:
+            # The buffer may hold private-key material (PKCS#8 output),
+            # so zero it before handing it back to the allocator.
+            lib.OPENSSL_cleanse(pdata_ptr[0], pdata_len[0])
             lib.OPENSSL_free(pdata_ptr[0])
         if enc_ctx != ffi.NULL:
             lib.OSSL_ENCODER_CTX_free(enc_ctx)
@@ -104,9 +107,9 @@ def _load_pkey(
                 f"(type={input_type.decode()}, struct={input_struct.decode()})"
             )
 
-        c_data = ffi.from_buffer("unsigned char[]", data)
+        c_data = to_c_buffer(data, "key data")
         pdata_ptr = ffi.new("const unsigned char *[1]", [c_data])
-        pdata_len = ffi.new("size_t *", len(data))
+        pdata_len = ffi.new("size_t *", len(c_data))
 
         result = lib.OSSL_DECODER_from_data(dec_ctx, pdata_ptr, pdata_len)
         check_openssl_errors(result, "Key decoding", OpenSSLError)
@@ -202,11 +205,12 @@ class Keys:
             OpenSSLError:    If the OpenSSL encoder fails.
         """
         _check_bytes(public_key, "public_key")
+        key_buf = to_c_buffer(public_key, "public_key")
         pkey = ffi.NULL
         try:
             lib.ERR_clear_error()
             pkey = lib.EVP_PKEY_new_raw_public_key_ex(
-                ffi.NULL, self._algorithm_b, ffi.NULL, public_key, len(public_key)
+                ffi.NULL, self._algorithm_b, ffi.NULL, key_buf, len(key_buf)
             )
             if pkey == ffi.NULL:
                 raise OpenSSLError(f"Failed to import public key for {self._algorithm}")
@@ -230,11 +234,12 @@ class Keys:
             OpenSSLError:    If the OpenSSL encoder fails.
         """
         _check_bytes(public_key, "public_key")
+        key_buf = to_c_buffer(public_key, "public_key")
         pkey = ffi.NULL
         try:
             lib.ERR_clear_error()
             pkey = lib.EVP_PKEY_new_raw_public_key_ex(
-                ffi.NULL, self._algorithm_b, ffi.NULL, public_key, len(public_key)
+                ffi.NULL, self._algorithm_b, ffi.NULL, key_buf, len(key_buf)
             )
             if pkey == ffi.NULL:
                 raise OpenSSLError(f"Failed to import public key for {self._algorithm}")
@@ -260,11 +265,12 @@ class Keys:
             OpenSSLError:    If the OpenSSL encoder fails.
         """
         _check_bytes(private_key, "private_key")
+        key_buf = to_c_buffer(private_key, "private_key")
         pkey = ffi.NULL
         try:
             lib.ERR_clear_error()
             pkey = lib.EVP_PKEY_new_raw_private_key_ex(
-                ffi.NULL, self._algorithm_b, ffi.NULL, private_key, len(private_key)
+                ffi.NULL, self._algorithm_b, ffi.NULL, key_buf, len(key_buf)
             )
             if pkey == ffi.NULL:
                 raise OpenSSLError(f"Failed to import private key for {self._algorithm}")
@@ -288,11 +294,12 @@ class Keys:
             OpenSSLError:    If the OpenSSL encoder fails.
         """
         _check_bytes(private_key, "private_key")
+        key_buf = to_c_buffer(private_key, "private_key")
         pkey = ffi.NULL
         try:
             lib.ERR_clear_error()
             pkey = lib.EVP_PKEY_new_raw_private_key_ex(
-                ffi.NULL, self._algorithm_b, ffi.NULL, private_key, len(private_key)
+                ffi.NULL, self._algorithm_b, ffi.NULL, key_buf, len(key_buf)
             )
             if pkey == ffi.NULL:
                 raise OpenSSLError(f"Failed to import private key for {self._algorithm}")

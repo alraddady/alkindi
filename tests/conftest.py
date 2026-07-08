@@ -5,8 +5,6 @@ import pytest
 from alkindi import KEM, Signature
 from alkindi._internal.params import MLDSA_PARAMS, MLKEM_PARAMS
 
-MESSAGE = b"the quick brown fox jumps over the lazy dog"
-
 # Only fast SLH-DSA variants — full SLH-DSA keygen is slow.
 _SLHDSA_FAST = ["SLH-DSA-SHA2-128F", "SLH-DSA-SHAKE-128F"]
 

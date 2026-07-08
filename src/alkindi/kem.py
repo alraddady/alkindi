@@ -8,19 +8,19 @@ Implementation Notes
 --------------------
 
 Thread Safety
-    All signature operations are thread-safe. Each operation creates and
+    All KEM operations are thread-safe. Each operation creates and
     disposes its own cryptographic context. No shared state is used.
 
 Memory Safety
-    Context managers and automatic finalizers ensure proper cleanup of native
-    resources. Use 'with' blocks where appropriate to ensure timely release.
+    Every operation releases its native resources in a ``finally`` block,
+    and private-key buffers are zeroed with ``OPENSSL_cleanse`` before release.
 """
 
 from _alkindi_ import ffi, lib
-from typing import NamedTuple, Tuple
+from typing import NamedTuple, Optional, Tuple
 
 from alkindi._internal.params import SUPPORTED_KEM_ALGORITHMS
-from alkindi._internal.utils import check_openssl_errors
+from alkindi._internal.utils import check_openssl_errors, to_c_buffer
 from alkindi._internal.exceptions import AlkindiAPIError, OpenSSLError
 
 
@@ -36,7 +36,7 @@ class KEM:
     """
 
     @staticmethod
-    def generate_keypair(algorithm: str, seed: bytes = None) -> KeyPair:
+    def generate_keypair(algorithm: str, seed: Optional[bytes] = None) -> KeyPair:
         """
         Generate a new ML-KEM keypair.
 
@@ -76,14 +76,16 @@ class KEM:
                 "See the Alkindi documentation for valid options."
             )
 
+        seed_buf = None
         if seed is not None:
             if not isinstance(seed, (bytes, bytearray, memoryview)):
                 raise AlkindiAPIError(
                     f"seed must be a bytes-like object, got {type(seed).__name__}"
                 )
-            if len(seed) != 64:
+            seed_buf = to_c_buffer(seed, "seed")
+            if len(seed_buf) != 64:
                 raise AlkindiAPIError(
-                    f"seed must be exactly 64 bytes, got {len(seed)}"
+                    f"seed must be exactly 64 bytes, got {len(seed_buf)}"
                 )
 
         algorithm_name_in_bytes: bytes = algorithm.encode("ascii")
@@ -106,11 +108,10 @@ class KEM:
             result: int = lib.EVP_PKEY_keygen_init(ctx)
             check_openssl_errors(result, "Key generation init", OpenSSLError)
 
-            if seed is not None:
-                seed_buf = ffi.from_buffer("unsigned char[]", seed)
+            if seed_buf is not None:
                 params = ffi.new("OSSL_PARAM[2]")
                 params[0] = lib.OSSL_PARAM_construct_octet_string(
-                    b"seed", seed_buf, len(seed)
+                    b"seed", seed_buf, len(seed_buf)
                 )
                 params[1] = lib.OSSL_PARAM_construct_end()
                 result = lib.EVP_PKEY_CTX_set_params(ctx, params)
@@ -195,9 +196,12 @@ class KEM:
             )
 
         algorithm_name_in_bytes: bytes = algorithm.encode("ascii")
+        pub_buf = to_c_buffer(public_key, "public_key")
 
         pkey = ffi.NULL
         ctx = ffi.NULL
+        secret_buf = None
+        secret_buf_size = 0
 
         try:
             lib.ERR_clear_error()
@@ -205,8 +209,8 @@ class KEM:
                 ffi.NULL,
                 algorithm_name_in_bytes,
                 ffi.NULL,
-                public_key,
-                len(public_key),
+                pub_buf,
+                len(pub_buf),
             )
             if pkey == ffi.NULL:
                 raise OpenSSLError(
@@ -234,6 +238,7 @@ class KEM:
 
             ciphertext_buf = ffi.new("unsigned char[]", ciphertext_len[0])
             secret_buf = ffi.new("unsigned char[]", secret_len[0])
+            secret_buf_size = secret_len[0]
             result = lib.EVP_PKEY_encapsulate(
                 ctx,
                 ciphertext_buf,
@@ -249,6 +254,8 @@ class KEM:
             return (ciphertext, shared_secret)
 
         finally:
+            if secret_buf is not None and secret_buf_size > 0:
+                lib.OPENSSL_cleanse(secret_buf, secret_buf_size)
             if ctx != ffi.NULL:
                 lib.EVP_PKEY_CTX_free(ctx)
             if pkey != ffi.NULL:
@@ -304,9 +311,13 @@ class KEM:
             )
 
         algorithm_name_in_bytes: bytes = algorithm.encode("ascii")
+        priv_buf = to_c_buffer(private_key, "private_key")
+        ct_buf = to_c_buffer(ciphertext, "ciphertext")
 
         pkey = ffi.NULL
         ctx = ffi.NULL
+        secret_buf = None
+        secret_buf_size = 0
 
         try:
             lib.ERR_clear_error()
@@ -314,8 +325,8 @@ class KEM:
                 ffi.NULL,
                 algorithm_name_in_bytes,
                 ffi.NULL,
-                private_key,
-                len(private_key),
+                priv_buf,
+                len(priv_buf),
             )
             if pkey == ffi.NULL:
                 raise OpenSSLError(
@@ -335,18 +346,19 @@ class KEM:
                 ctx,
                 ffi.NULL,
                 secret_len,
-                ciphertext,
-                len(ciphertext),
+                ct_buf,
+                len(ct_buf),
             )
             check_openssl_errors(result, "Decapsulation size query", OpenSSLError)
 
             secret_buf = ffi.new("unsigned char[]", secret_len[0])
+            secret_buf_size = secret_len[0]
             result = lib.EVP_PKEY_decapsulate(
                 ctx,
                 secret_buf,
                 secret_len,
-                ciphertext,
-                len(ciphertext),
+                ct_buf,
+                len(ct_buf),
             )
             check_openssl_errors(result, "Decapsulation", OpenSSLError)
 
@@ -355,6 +367,8 @@ class KEM:
             return shared_secret
 
         finally:
+            if secret_buf is not None and secret_buf_size > 0:
+                lib.OPENSSL_cleanse(secret_buf, secret_buf_size)
             if ctx != ffi.NULL:
                 lib.EVP_PKEY_CTX_free(ctx)
             if pkey != ffi.NULL:

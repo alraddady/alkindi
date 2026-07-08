@@ -7,7 +7,32 @@ from __future__ import annotations
 from _alkindi_ import ffi, lib
 from typing import Any, Type
 
-from alkindi._internal.exceptions import AlkindiError, OpenSSLError
+from alkindi._internal.exceptions import AlkindiAPIError, AlkindiError, OpenSSLError
+
+
+def to_c_buffer(data: Any, param_name: str) -> Any:
+    """
+    Return a cdata ``unsigned char[]`` view over a bytes-like object.
+
+    CFFI only auto-converts ``bytes`` when a C pointer argument is expected;
+    ``bytearray`` and ``memoryview`` must go through ``ffi.from_buffer``.
+    The returned cdata is a zero-copy view that keeps *data* alive, and
+    ``len()`` of it is always the size in bytes (unlike ``len()`` of a
+    ``memoryview`` with itemsize > 1).
+
+    Args:
+        data: A bytes-like object (bytes, bytearray, or memoryview)
+        param_name: Parameter name used in error messages
+
+    Raises:
+        AlkindiAPIError: If data does not expose a contiguous buffer
+    """
+    try:
+        return ffi.from_buffer("unsigned char[]", data)
+    except (TypeError, BufferError) as exc:
+        raise AlkindiAPIError(
+            f"{param_name} must be a contiguous bytes-like object: {exc}"
+        ) from exc
 
 
 def check_openssl_errors(

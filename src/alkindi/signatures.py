@@ -15,15 +15,15 @@ Thread Safety
     disposes its own cryptographic context. No shared state is used.
 
 Memory Safety
-    Context managers and automatic finalizers ensure proper cleanup of native
-    resources. Use 'with' blocks where appropriate to ensure timely release.
+    Every operation releases its native resources in a ``finally`` block,
+    and private-key buffers are zeroed with ``OPENSSL_cleanse`` before release.
 """
 
 from _alkindi_ import ffi, lib
-from typing import NamedTuple
+from typing import NamedTuple, Optional
 
 from alkindi._internal.params import SUPPORTED_SIGNATURE_ALGORITHMS
-from alkindi._internal.utils import check_openssl_errors
+from alkindi._internal.utils import check_openssl_errors, to_c_buffer
 from alkindi._internal.exceptions import AlkindiAPIError, OpenSSLError
 
 
@@ -119,7 +119,7 @@ class Signature:
     @staticmethod
     def sign(
             algorithm: str, private_key: bytes, message: bytes,
-            context: bytes = None,
+            context: Optional[bytes] = None,
     ) -> bytes:
         """
         Sign a message with a private key.
@@ -166,17 +166,21 @@ class Signature:
                 f"message must be a bytes-like object, got {type(message).__name__}"
             )
 
+        ctx_buf = None
         if context is not None:
             if not isinstance(context, (bytes, bytearray, memoryview)):
                 raise AlkindiAPIError(
                     f"context must be a bytes-like object, got {type(context).__name__}"
                 )
-            if len(context) > 255:
+            ctx_buf = to_c_buffer(context, "context")
+            if len(ctx_buf) > 255:
                 raise AlkindiAPIError(
-                    f"context must be at most 255 bytes, got {len(context)}"
+                    f"context must be at most 255 bytes, got {len(ctx_buf)}"
                 )
 
         algorithm_name_in_bytes: bytes = algorithm.encode("ascii")
+        priv_buf = to_c_buffer(private_key, "private_key")
+        msg_buf = to_c_buffer(message, "message")
 
         pkey = ffi.NULL
         md_ctx = ffi.NULL
@@ -187,8 +191,8 @@ class Signature:
                 ffi.NULL,
                 algorithm_name_in_bytes,
                 ffi.NULL,
-                private_key,
-                len(private_key),
+                priv_buf,
+                len(priv_buf),
             )
             if pkey == ffi.NULL:
                 raise OpenSSLError(
@@ -200,7 +204,7 @@ class Signature:
             if md_ctx == ffi.NULL:
                 raise OpenSSLError("Failed to create message digest context")
 
-            if context is not None:
+            if ctx_buf is not None:
                 pctx_ptr = ffi.new("EVP_PKEY_CTX **")
             else:
                 pctx_ptr = ffi.NULL
@@ -216,11 +220,10 @@ class Signature:
             )
             check_openssl_errors(result, "Signature initialization", OpenSSLError)
 
-            if context is not None:
-                ctx_buf = ffi.from_buffer("unsigned char[]", context)
+            if ctx_buf is not None:
                 params = ffi.new("OSSL_PARAM[2]")
                 params[0] = lib.OSSL_PARAM_construct_octet_string(
-                    b"context-string", ctx_buf, len(context)
+                    b"context-string", ctx_buf, len(ctx_buf)
                 )
                 params[1] = lib.OSSL_PARAM_construct_end()
                 result = lib.EVP_PKEY_CTX_set_params(pctx_ptr[0], params)
@@ -231,8 +234,8 @@ class Signature:
                 md_ctx,
                 ffi.NULL,
                 sig_len,
-                message,
-                len(message),
+                msg_buf,
+                len(msg_buf),
             )
             check_openssl_errors(result, "Signature size query", OpenSSLError)
 
@@ -241,8 +244,8 @@ class Signature:
                 md_ctx,
                 sig_buf,
                 sig_len,
-                message,
-                len(message),
+                msg_buf,
+                len(msg_buf),
             )
             check_openssl_errors(result, "Signature generation", OpenSSLError)
 
@@ -257,7 +260,7 @@ class Signature:
     @staticmethod
     def verify(
             algorithm: str, public_key: bytes, message: bytes, signature: bytes,
-            context: bytes = None,
+            context: Optional[bytes] = None,
     ) -> bool:
         """
         Verify a digital signature.
@@ -312,17 +315,22 @@ class Signature:
                 f"signature must be a bytes-like object, got {type(signature).__name__}"
             )
 
+        ctx_buf = None
         if context is not None:
             if not isinstance(context, (bytes, bytearray, memoryview)):
                 raise AlkindiAPIError(
                     f"context must be a bytes-like object, got {type(context).__name__}"
                 )
-            if len(context) > 255:
+            ctx_buf = to_c_buffer(context, "context")
+            if len(ctx_buf) > 255:
                 raise AlkindiAPIError(
-                    f"context must be at most 255 bytes, got {len(context)}"
+                    f"context must be at most 255 bytes, got {len(ctx_buf)}"
                 )
 
         algorithm_name_in_bytes: bytes = algorithm.encode("ascii")
+        pub_buf = to_c_buffer(public_key, "public_key")
+        msg_buf = to_c_buffer(message, "message")
+        sig_buf = to_c_buffer(signature, "signature")
 
         pkey = ffi.NULL
         md_ctx = ffi.NULL
@@ -333,8 +341,8 @@ class Signature:
                 ffi.NULL,
                 algorithm_name_in_bytes,
                 ffi.NULL,
-                public_key,
-                len(public_key),
+                pub_buf,
+                len(pub_buf),
             )
             if pkey == ffi.NULL:
                 raise OpenSSLError(
@@ -346,7 +354,7 @@ class Signature:
             if md_ctx == ffi.NULL:
                 raise OpenSSLError("Failed to create message digest context")
 
-            if context is not None:
+            if ctx_buf is not None:
                 pctx_ptr = ffi.new("EVP_PKEY_CTX **")
             else:
                 pctx_ptr = ffi.NULL
@@ -366,11 +374,10 @@ class Signature:
                 OpenSSLError,
             )
 
-            if context is not None:
-                ctx_buf = ffi.from_buffer("unsigned char[]", context)
+            if ctx_buf is not None:
                 params = ffi.new("OSSL_PARAM[2]")
                 params[0] = lib.OSSL_PARAM_construct_octet_string(
-                    b"context-string", ctx_buf, len(context)
+                    b"context-string", ctx_buf, len(ctx_buf)
                 )
                 params[1] = lib.OSSL_PARAM_construct_end()
                 result = lib.EVP_PKEY_CTX_set_params(pctx_ptr[0], params)
@@ -378,10 +385,10 @@ class Signature:
 
             result = lib.EVP_DigestVerify(
                 md_ctx,
-                signature,
-                len(signature),
-                message,
-                len(message),
+                sig_buf,
+                len(sig_buf),
+                msg_buf,
+                len(msg_buf),
             )
 
             if result == 1:
