@@ -5,6 +5,32 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.4] — 2026-07-08
+
+### Added
+- `bytearray` and `memoryview` inputs are now accepted (and actually work)
+  across KEM, signature, and serialization APIs
+- Python 3.14 wheels (`cp314`) added to the CI build matrix
+- Test suite coverage for bytes-like inputs, including non-`bytes` memoryviews
+
+### Changed
+- Upgraded OpenSSL to 3.6.3 (security patch release, June 2026)
+- Build now requires `setuptools>=77` (needed for the SPDX license metadata);
+  removed the redundant `wheel` build requirement
+
+### Fixed
+- Passing a `bytearray` or `memoryview` raised `TypeError` from CFFI instead
+  of performing the operation; all bytes-like inputs are now routed through
+  `ffi.from_buffer`
+- Length validation for `seed` and `context` now measures bytes, so
+  memoryviews with itemsize > 1 (e.g. over an `array.array`) are handled
+  correctly
+- Shared-secret buffers in encapsulate/decapsulate and encoder output buffers
+  holding PKCS#8 private keys are now zeroed with `OPENSSL_cleanse` before
+  release
+- Corrected type hints for optional parameters (`seed`, `context`) and stale
+  thread-safety/memory-safety docstrings
+
 ## [0.0.3] — 2026-04-16
 
 ### Added
@@ -47,6 +73,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Algorithm selection guide (`alkindi.guide()`)
 - Static OpenSSL build script (`scripts/build_openssl.sh`)
 
+[0.0.4]: https://github.com/alraddady/alkindi/compare/v0.0.3...v0.0.4
 [0.0.3]: https://github.com/alraddady/alkindi/compare/v0.0.2...v0.0.3
 [0.0.2]: https://github.com/alraddady/alkindi/compare/v0.0.1...v0.0.2
 [0.0.1]: https://github.com/alraddady/alkindi/releases/tag/v0.0.1
